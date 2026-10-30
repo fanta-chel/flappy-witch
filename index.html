@@ -697,7 +697,7 @@
     let basePipeGap = 155, pipeSpeed = 2.5, pipeW = 80;
 
     function resizeCanvas() {
-        DPR = Math.min(window.devicePixelRatio || 1, 3);
+        DPR = Math.min(window.devicePixelRatio || 1, 1.5);
         VW = window.innerWidth;
         VH = window.innerHeight;
         canvas.width = Math.round(VW * DPR);
@@ -705,7 +705,7 @@
         canvas.style.width = VW + 'px';
         canvas.style.height = VH + 'px';
         ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingEnabled = false;
         ctx.imageSmoothingQuality = 'high';
         
         const settings = DIFFICULTY_SETTINGS[currentDifficulty];
