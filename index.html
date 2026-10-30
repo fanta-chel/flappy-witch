@@ -669,9 +669,9 @@
         ZEROG_RELEASE_DAMP: 0.3,
         ZEROG_MAX_VEL: 12,
         PIPE_GAP_MIN: 110,
-        PIPE_GAP_RATIO: 0.28,
+        PIPE_GAP_RATIO: 0.26,
         PIPE_SPEED_RATIO: 0.006,
-        PIPE_SPAWN_INTERVAL: 100,
+        PIPE_SPAWN_INTERVAL: 130,
         PIPE_MIN_TOP_RATIO: 0.12,
         PIPE_MAX_BOTTOM_RATIO: 0.12,
         PIPE_DESPAWN_X: -80,
@@ -696,7 +696,7 @@
     let VW = 0, VH = 0, DPR = 1;
     let basePipeGap = 155, pipeSpeed = 2.5, pipeW = 80;
 
-    function resizeCanvas() {
+function resizeCanvas() {
         DPR = Math.min(window.devicePixelRatio || 1, 1.5);
         VW = window.innerWidth;
         VH = window.innerHeight;
@@ -706,12 +706,28 @@
         canvas.style.height = VH + 'px';
         ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
         ctx.imageSmoothingEnabled = false;
-        ctx.imageSmoothingQuality = 'high';
         
         const settings = DIFFICULTY_SETTINGS[currentDifficulty];
+        
         basePipeGap = Math.max(CONFIG.PIPE_GAP_MIN, Math.round(VH * CONFIG.PIPE_GAP_RATIO * settings.gapMult));
-        pipeSpeed = Math.max(2, VW * CONFIG.PIPE_SPEED_RATIO * settings.speedMult);
-        pipeW = PIPE_CONFIG.width;
+        
+        const calculatedSpeed = VW * CONFIG.PIPE_SPEED_RATIO * settings.speedMult;
+        pipeSpeed = Math.max(3.8, calculatedSpeed);
+
+        if (VW < 500) {
+            pipeW = Math.round(VW * 0.16); 
+            WITCH_CONFIG.width = 70;
+            WITCH_CONFIG.height = 70;
+            WITCH_CONFIG.hitboxPaddingX = 20;
+            WITCH_CONFIG.hitboxPaddingY = 18;
+        } else {
+            pipeW = PIPE_CONFIG.width;
+            WITCH_CONFIG.width = 100;
+            WITCH_CONFIG.height = 100;
+            WITCH_CONFIG.hitboxPaddingX = 30;
+            WITCH_CONFIG.hitboxPaddingY = 25;
+        }
+
         draw();
     }
 
