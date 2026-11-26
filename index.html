@@ -28,7 +28,6 @@
         display: block;
         touch-action: none;
         cursor: pointer;
-        image-rendering: pixelated;
     }
 
     .hud {
@@ -227,7 +226,6 @@
         50%      { transform: translateY(-6px); }
     }
 
-    /* Селектор сложности */
     .diff-selector {
         display: flex;
         gap: 6px;
@@ -280,6 +278,7 @@
     .pixel-btn:hover { transform: translateY(-2px); box-shadow: inset -3px -3px 0 rgba(0,0,0,0.35), inset 3px 3px 0 rgba(255,255,255,0.15), 0 8px 0 #2d1b4e; }
     .pixel-btn:active { transform: translateY(4px); box-shadow: inset -3px -3px 0 rgba(0,0,0,0.35), inset 3px 3px 0 rgba(255,255,255,0.15), 0 2px 0 #2d1b4e; }
     .pixel-btn:focus-visible { outline: 3px solid #ffd54f; outline-offset: 3px; }
+    .pixel-btn:disabled { opacity: 0.6; cursor: default; }
 
     .pixel-btn.primary { background: linear-gradient(180deg, #b06ee8, #7d3fb8); border-color: #ffd54f; }
     .pixel-btn.gold { background: linear-gradient(180deg, #ffd54f, #ff9800); border-color: #fff8e1; color: #4a2870; text-shadow: 1px 1px 0 rgba(255,255,255,0.4); }
@@ -321,6 +320,7 @@
     }
 
     .go-progress { margin: 6px 0 14px; text-align: left; }
+    .go-progress[hidden] { display: none; }
     .go-progress-head { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.7rem; font-weight: 900; letter-spacing: 0.06em; color: #c4b5e0; }
     .go-progress-track { height: 14px; background: #0d0518; border: 2px solid #6a4a9e; overflow: hidden; box-shadow: inset 0 2px 0 rgba(0,0,0,0.5); }
     .go-progress-fill {
@@ -378,16 +378,6 @@
     .review-form input:focus, .review-form textarea:focus, .review-form select:focus { border-color: #ffd54f; }
     .review-form textarea { resize: vertical; min-height: 70px; }
 
-    .review-list {
-        display: flex; flex-direction: column; gap: 10px; margin: 10px 0;
-        max-height: 260px; overflow-y: auto; text-align: left;
-    }
-    .review-item { background: #2d1b4e; border: 2px solid #6a4a9e; padding: 10px 12px; font-size: 0.82rem; }
-    .review-item .name { font-weight: 900; color: #ffd54f; margin-right: 6px; }
-    .review-item .stars { color: #ff9800; letter-spacing: 1px; }
-    .review-item .text { color: #c4b5e0; margin-top: 4px; line-height: 1.4; }
-    .review-item .date { color: #6a4a9e; font-size: 0.66rem; margin-top: 4px; }
-
     .cutscene-screen {
         background: transparent !important;
         -webkit-backdrop-filter: none !important;
@@ -440,7 +430,7 @@
         <span id="hudScoreValue">0</span>
     </div>
     <div class="hud-pill best" id="hudBest" hidden>
-        <canvas id="hudTrophyIcon" width="18" height="18" style="image-rendering:pixelated;width:18px;height:18px;"></canvas>
+        <canvas id="hudTrophyIcon" width="12" height="12" style="image-rendering:pixelated;width:24px;height:24px;"></canvas>
         <span id="hudBestValue">0</span>
     </div>
     <div class="hud-pill mode" id="hudMode" hidden>∞ ENDLESS</div>
@@ -466,7 +456,6 @@
         <h1 class="pixel-h1">FLAPPY<br>WITCH</h1>
         <p class="lead">Помоги ведьмочке долететь<br>до зачарованного гнезда</p>
 
-        <!-- Выбор сложности -->
         <div class="diff-selector" id="diffSelector">
             <button class="diff-btn easy" data-diff="easy" type="button">🌱 ЛЁГКИЙ</button>
             <button class="diff-btn normal active" data-diff="normal" type="button">⚖️ ОБЫЧНЫЙ</button>
@@ -481,7 +470,7 @@
         </div>
 
         <div class="best-line">
-            <canvas id="menuTrophy" width="16" height="16" style="image-rendering:pixelated;width:16px;height:16px;"></canvas>
+            <canvas id="menuTrophy" width="12" height="12" style="image-rendering:pixelated;width:24px;height:24px;"></canvas>
             <span>РЕКОРД: <span id="bestMenu">0</span></span>
         </div>
     </div>
@@ -540,7 +529,7 @@
         <p class="lead">Долетела до гнезда к птенцам!</p>
 
         <div class="best-line">
-            <canvas id="winTrophy" width="16" height="16" style="image-rendering:pixelated;width:16px;height:16px;"></canvas>
+            <canvas id="winTrophy" width="12" height="12" style="image-rendering:pixelated;width:24px;height:24px;"></canvas>
             <span>РЕКОРД: <span id="bestWin">0</span></span>
         </div>
 
@@ -581,7 +570,6 @@
             <button class="pixel-btn gold" id="btnSendReview" type="button">ОТПРАВИТЬ</button>
         </div>
 
-        <div class="review-list" id="reviewList"></div>
         <button class="pixel-btn ghost" id="btnReviewsBack" type="button" style="margin-top:12px;">НАЗАД</button>
     </div>
 </div>
@@ -592,41 +580,86 @@
 (function () {
     'use strict';
 
+    /* =====================================================================
+       НАСТРОЙКИ
+       ===================================================================== */
     const BG_CONFIG = { src: 'fon.jpg' };
-    const WITCH_CONFIG = { src: 'gvn.png', width: 100, height: 100, hitboxPaddingX: 30, hitboxPaddingY: 25 };
-    const PIPE_CONFIG = { width: 80, capHeight: 24 };
+    const WITCH_CONFIG = { src: 'gvn.png', maxSize: 100, minSize: 64, hitboxPadX: 0.30, hitboxPadY: 0.25 };
+    const PIPE_CONFIG = { width: 80, capHeight: 24, capOverhang: 4 };
 
-    // Пресеты сложностей
     const DIFFICULTY_SETTINGS = {
-        easy:   { gapMult: 1.25, speedMult: 0.82, portalMinScore: 8,  portalRandomAdd: 4,  mirrorPassedReq: 8 },
-        normal: { gapMult: 1.0,  speedMult: 1.0,  portalMinScore: 15, portalRandomAdd: 6,  mirrorPassedReq: 14 },
-        hard:   { gapMult: 0.82, speedMult: 1.35, portalMinScore: 22, portalRandomAdd: 8,  mirrorPassedReq: 18 }
+        easy:   { gapMult: 1.25, speedMult: 0.82, portalMinScore: 8,  portalRandomAdd: 4, mirrorPassedReq: 8 },
+        normal: { gapMult: 1.0,  speedMult: 1.0,  portalMinScore: 15, portalRandomAdd: 6, mirrorPassedReq: 14 },
+        hard:   { gapMult: 0.82, speedMult: 1.35, portalMinScore: 22, portalRandomAdd: 8, mirrorPassedReq: 18 }
     };
+
+    /* Физика. Все значения — в пикселях и секундах (не зависят от FPS).
+       Для экрана высотой 720px; на других экранах масштабируются на S. */
+    const PHYS = {
+        GRAVITY: 1350,            // px/s²
+        JUMP_VELOCITY: 450,       // px/s вверх при взмахе
+        APEX_THRESHOLD: 90,       // |v| ниже этого — «зависание» на вершине прыжка
+        APEX_GRAVITY_MULT: 0.72,  // во столько раз слабее гравитация на вершине
+        MAX_FALL: 640,            // предельная скорость падения
+        MAX_RISE: 560,            // предельная скорость подъёма
+        ZEROG_GRAVITY: 900,
+        ZEROG_THRUST: 2200,
+        ZEROG_DRAG: 1.7,          // сопротивление (плавность в режиме без гравитации)
+        ZEROG_MAX: 540,
+        ROT_PER_VEL: 0.065,       // градусов наклона на 1 px/s
+        ROT_MIN: -25,
+        ROT_MAX: 55,
+        ROT_SMOOTH: 10,           // скорость сглаживания наклона
+    };
+
+    const CONFIG = Object.freeze({
+        MAX_DPR: 2,
+        MAX_DELTA: 0.05,
+        SUBSTEP: 1 / 120,
+        PIPE_GAP_MIN: 110,
+        PIPE_GAP_RATIO: 0.28,
+        PIPE_MIN_TOP_RATIO: 0.10,
+        PIPE_MAX_STEP_RATIO: 0.32,   // макс. перепад высоты между соседними колоннами
+        SPEED_RATIO: 0.28,
+        SPEED_MIN: 210,
+        SPEED_MAX: 340,
+        SPACING_RATIO: 0.30,
+        SPACING_MIN: 280,
+        SPACING_MAX: 460,
+        BG_PARALLAX: 0.25,
+        PIPES_TO_WIN: 50,
+        BIRD_X_RATIO: 0.18,
+        ENDLESS_SPEEDUP_EVERY: 10,
+        ENDLESS_SPEEDUP_FACTOR: 0.04,
+        ENDLESS_SPEED_MAX: 1.8,
+        ENDLESS_GAP_SHRINK: 0.98,
+        ENDLESS_GAP_MIN: 100,
+    });
+
+    const STORAGE_KEY = 'flappy_witch_png_best_v1';
+    const MUTE_KEY = 'flappy_witch_muted_v1';
+
+    function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
 
     let currentDifficulty = 'normal';
 
+    /* =====================================================================
+       РЕСУРСЫ
+       ===================================================================== */
     const Assets = {
         bg: null, witch: null,
-        loadedCount: 0, totalCount: 2,
         load() {
-            return new Promise((resolve) => {
-                const done = () => {
-                    this.loadedCount++;
-                    if (this.loadedCount >= this.totalCount) resolve();
-                };
-                const loadImg = (src) => {
-                    if (!src) { done(); return null; }
-                    const img = new Image();
-                    img.onload = () => { done(); };
-                    img.onerror = () => { done(); };
-                    img.src = src;
-                    return img;
-                };
-                this.bg = loadImg(BG_CONFIG.src);
-                this.witch = loadImg(WITCH_CONFIG.src);
+            const loadImg = (src) => new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = () => resolve(img);
+                img.src = src;
+            });
+            return Promise.all([loadImg(BG_CONFIG.src), loadImg(WITCH_CONFIG.src)]).then(([bg, witch]) => {
+                this.bg = bg; this.witch = witch;
             });
         },
-        isReady(img) { return img && img.complete && img.naturalWidth > 0; },
+        isReady(img) { return !!img && img.complete && img.naturalWidth > 0; },
     };
 
     const ICON_TROPHY = [
@@ -636,19 +669,17 @@
     ];
     const PAL_COMMON = { '.': null, 'K': '#0d0518', 'j': '#ffd54f', 'O': '#ff9800' };
 
-    function renderSprite(sprite, palette, scale, canvas) {
+    function renderSprite(sprite, palette, canvas) {
         if (!canvas) return;
         const w = sprite[0].length, h = sprite.length;
-        canvas.width = w * scale;
-        canvas.height = h * scale;
+        canvas.width = w; canvas.height = h;
         const cx = canvas.getContext('2d');
-        cx.imageSmoothingEnabled = false;
         for (let y = 0; y < h; y++) {
             for (let x = 0; x < w; x++) {
                 const color = palette[sprite[y][x]];
                 if (!color) continue;
                 cx.fillStyle = color;
-                cx.fillRect(x * scale, y * scale, scale, scale);
+                cx.fillRect(x, y, 1, 1);
             }
         }
     }
@@ -656,142 +687,43 @@
     function initHudImages() {
         const witchIcon = document.getElementById('hudWitchIcon');
         if (witchIcon) witchIcon.src = WITCH_CONFIG.src;
-        renderSprite(ICON_TROPHY, PAL_COMMON, 1.5, document.getElementById('hudTrophyIcon'));
-        renderSprite(ICON_TROPHY, PAL_COMMON, 1.2, document.getElementById('menuTrophy'));
-        renderSprite(ICON_TROPHY, PAL_COMMON, 1.2, document.getElementById('winTrophy'));
+        renderSprite(ICON_TROPHY, PAL_COMMON, document.getElementById('hudTrophyIcon'));
+        renderSprite(ICON_TROPHY, PAL_COMMON, document.getElementById('menuTrophy'));
+        renderSprite(ICON_TROPHY, PAL_COMMON, document.getElementById('winTrophy'));
     }
 
-    const CONFIG = Object.freeze({
-        GRAVITY: 0.45,
-        JUMP_FORCE: -7.5,
-        ZEROG_GRAVITY: 0.32,
-        ZEROG_THRUST: -10,
-        ZEROG_RELEASE_DAMP: 0.3,
-        ZEROG_MAX_VEL: 12,
-        PIPE_GAP_MIN: 110,
-        PIPE_GAP_RATIO: 0.26,
-        PIPE_SPEED_RATIO: 0.006,
-        PIPE_SPAWN_INTERVAL: 130,
-        PIPE_MIN_TOP_RATIO: 0.12,
-        PIPE_MAX_BOTTOM_RATIO: 0.12,
-        PIPE_DESPAWN_X: -80,
-        PIPES_TO_WIN: 50,
-        BIRD_X_RATIO: 0.18,
-        ROTATION_FACTOR: 4,
-        ROTATION_MIN_DEG: -25,
-        ROTATION_MAX_DEG: 60,
-        BASE_FPS: 60,
-        MAX_DELTA: 0.05,
-        ENDLESS_SPEEDUP_EVERY: 10,
-        ENDLESS_SPEEDUP_FACTOR: 0.04,
-        ENDLESS_GAP_SHRINK: 0.98,
-        ENDLESS_GAP_MIN: 100,
-    });
+    /* =====================================================================
+       ЗВУК (один AudioContext, звуки и музыка планируются по часам WebAudio)
+       ===================================================================== */
+    const Sound = (function () {
+        let actx = null, master = null, musicBus = null;
+        let muted = false, musicOn = false, timer = null;
+        let evIdx = 0, loopBase = 0;
+        try { muted = localStorage.getItem(MUTE_KEY) === '1'; } catch (_) {}
 
-    const STORAGE_KEY = 'flappy_witch_png_best_v1';
-
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-
-    let VW = 0, VH = 0, DPR = 1;
-    let basePipeGap = 155, pipeSpeed = 2.5, pipeW = 80;
-
-function resizeCanvas() {
-        DPR = Math.min(window.devicePixelRatio || 1, 1.5);
-        VW = window.innerWidth;
-        VH = window.innerHeight;
-        canvas.width = Math.round(VW * DPR);
-        canvas.height = Math.round(VH * DPR);
-        canvas.style.width = VW + 'px';
-        canvas.style.height = VH + 'px';
-        ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-        ctx.imageSmoothingEnabled = false;
-        
-        const settings = DIFFICULTY_SETTINGS[currentDifficulty];
-        
-        basePipeGap = Math.max(CONFIG.PIPE_GAP_MIN, Math.round(VH * CONFIG.PIPE_GAP_RATIO * settings.gapMult));
-        
-        const calculatedSpeed = VW * CONFIG.PIPE_SPEED_RATIO * settings.speedMult;
-        pipeSpeed = Math.max(3.8, calculatedSpeed);
-
-        if (VW < 500) {
-            pipeW = Math.round(VW * 0.16); 
-            WITCH_CONFIG.width = 70;
-            WITCH_CONFIG.height = 70;
-            WITCH_CONFIG.hitboxPaddingX = 20;
-            WITCH_CONFIG.hitboxPaddingY = 18;
-        } else {
-            pipeW = PIPE_CONFIG.width;
-            WITCH_CONFIG.width = 100;
-            WITCH_CONFIG.height = 100;
-            WITCH_CONFIG.hitboxPaddingX = 30;
-            WITCH_CONFIG.hitboxPaddingY = 25;
-        }
-
-        draw();
-    }
-
-    const Audio = (function () {
-        let actx = null, enabled = true;
-        function ensure() {
-            if (!actx) {
-                try {
-                    const C = window.AudioContext || window.webkitAudioContext;
-                    if (!C) { enabled = false; return null; }
-                    actx = new C();
-                } catch (_) { enabled = false; return null; }
-            }
-            if (actx.state === 'suspended') actx.resume().catch(() => {});
-            return actx;
-        }
-        function beep(freq, dur, type, gain) {
-            if (!enabled) return;
-            const c = ensure(); if (!c) return;
-            try {
-                const o = c.createOscillator(), g = c.createGain();
-                o.type = type || 'square';
-                o.frequency.value = freq;
-                g.gain.setValueAtTime(0, c.currentTime);
-                g.gain.linearRampToValueAtTime(gain || 0.06, c.currentTime + 0.01);
-                g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + dur);
-                o.connect(g).connect(c.destination);
-                o.start(); o.stop(c.currentTime + dur);
-            } catch (_) {}
-        }
-        return {
-            jump() { beep(720, 0.06, 'square', 0.05); },
-            score() { beep(1050, 0.08, 'square', 0.05); },
-            portal() { 
-                beep(400, 0.1, 'sine', 0.08);
-                setTimeout(() => beep(800, 0.15, 'sine', 0.08), 80);
-                setTimeout(() => beep(1200, 0.2, 'sine', 0.08), 160);
-            },
-            shieldBreak() { beep(300, 0.2, 'sawtooth', 0.1); },
-            hit() {
-                beep(140, 0.15, 'square', 0.08);
-                setTimeout(() => beep(90, 0.25, 'square', 0.06), 70);
-            },
-            win() {
-                [659, 784, 988, 1319].forEach((f, i) =>
-                    setTimeout(() => beep(f, 0.14, 'square', 0.06), i * 100));
-            },
-            unlock() { ensure(); }
-        };
-    })();
-
-    const Music = (function () {
-        let actx = null, muted = false, playing = false, loopTimer = null, masterGain = null;
+        const BEAT = 0.26;
         const MELODY = [
             [392.00, 1], [440.00, 0.5], [466.16, 0.5], [523.25, 1], [466.16, 1], [440.00, 1], [392.00, 2],
             [349.23, 1], [392.00, 0.5], [415.30, 0.5], [466.16, 1], [440.00, 1], [392.00, 1], [349.23, 2],
             [392.00, 1], [466.16, 1], [523.25, 1], [622.25, 2], [523.25, 1], [466.16, 2],
             [392.00, 1], [440.00, 1], [466.16, 1], [523.25, 2], [392.00, 2],
         ];
-        const BASS = [
-            [98.00, 2], [98.00, 2], [87.31, 2], [87.31, 2],
-            [98.00, 2], [98.00, 2], [87.31, 2], [87.31, 2],
-        ];
-        const BEAT_MS = 260, LOOP_DELAY_MS = 200;
+        const BASS = [[98.00, 2], [98.00, 2], [87.31, 2], [87.31, 2]];
+
+        const events = [];
+        let loopBeats = 0;
+        (function buildEvents() {
+            let t = 0;
+            for (const n of MELODY) { events.push({ t, f: n[0], d: n[1] * BEAT * 1.1, type: 'triangle', g: 0.06 }); t += n[1]; }
+            loopBeats = t;
+            let bt = 0, i = 0;
+            while (bt < loopBeats) {
+                const n = BASS[i % BASS.length];
+                events.push({ t: bt, f: n[0], d: n[1] * BEAT * 1.2, type: 'sine', g: 0.05 });
+                bt += n[1]; i++;
+            }
+            events.sort((a, b) => a.t - b.t);
+        })();
 
         function ensure() {
             if (!actx) {
@@ -799,76 +731,73 @@ function resizeCanvas() {
                     const C = window.AudioContext || window.webkitAudioContext;
                     if (!C) return null;
                     actx = new C();
-                    masterGain = actx.createGain();
-                    masterGain.gain.value = 0.15;
-                    masterGain.connect(actx.destination);
+                    master = actx.createGain();
+                    master.gain.value = muted ? 0 : 1;
+                    master.connect(actx.destination);
+                    musicBus = actx.createGain();
+                    musicBus.gain.value = 0.15;
+                    musicBus.connect(master);
                 } catch (_) { return null; }
             }
             if (actx.state === 'suspended') actx.resume().catch(() => {});
             return actx;
         }
 
-        function playNote(freq, durSec, type, gainValue) {
-            if (muted) return;
+        function tone(freq, dur, type, gain, delay, dest) {
             const c = ensure(); if (!c) return;
             try {
+                const t0 = c.currentTime + Math.max(0, delay || 0);
                 const o = c.createOscillator(), g = c.createGain();
-                o.type = type || 'triangle';
+                o.type = type || 'square';
                 o.frequency.value = freq;
-                g.gain.setValueAtTime(0, c.currentTime);
-                g.gain.linearRampToValueAtTime(gainValue || 0.08, c.currentTime + 0.02);
-                g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + durSec);
-                o.connect(g).connect(masterGain);
-                o.start(); o.stop(c.currentTime + durSec);
+                g.gain.setValueAtTime(0.0001, t0);
+                g.gain.linearRampToValueAtTime(gain || 0.06, t0 + 0.01);
+                g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+                o.connect(g); g.connect(dest || master);
+                o.start(t0); o.stop(t0 + dur + 0.02);
             } catch (_) {}
         }
+        function sfx(freq, dur, type, gain, delay) { if (!muted) tone(freq, dur, type, gain, delay, master); }
 
-        function scheduleLoop() {
-            if (!playing || muted) {
-                loopTimer = setTimeout(scheduleLoop, 100);
-                return;
+        function scheduleMusic() {
+            if (!actx || !musicOn || actx.state !== 'running') return;
+            const ahead = actx.currentTime + 0.5;
+            while (loopBase + events[evIdx].t * BEAT < ahead) {
+                const e = events[evIdx];
+                const when = loopBase + e.t * BEAT;
+                if (!muted && when >= actx.currentTime - 0.05) tone(e.f, e.d, e.type, e.g, when - actx.currentTime, musicBus);
+                evIdx++;
+                if (evIdx >= events.length) { evIdx = 0; loopBase += loopBeats * BEAT + 0.2; }
             }
-            let t = 0;
-            for (let i = 0; i < MELODY.length; i++) {
-                const n = MELODY[i];
-                const delay = t, dur = n[1] * BEAT_MS / 1000;
-                setTimeout(() => playNote(n[0], dur * 1.1, 'triangle', 0.06), delay);
-                t += n[1] * BEAT_MS;
-            }
-            let bt = 0;
-            for (let i = 0; i < BASS.length; i++) {
-                const n = BASS[i];
-                const delay = bt, dur = n[1] * BEAT_MS / 1000;
-                setTimeout(() => playNote(n[0], dur * 1.2, 'sine', 0.05), delay);
-                bt += n[1] * BEAT_MS;
-            }
-            loopTimer = setTimeout(scheduleLoop, t + LOOP_DELAY_MS);
         }
 
         return {
-            start() {
-                if (playing) return;
-                playing = true;
-                ensure();
-                scheduleLoop();
+            jump()  { sfx(720, 0.06, 'square', 0.05); },
+            score() { sfx(1050, 0.08, 'square', 0.05); },
+            portal() { sfx(400, 0.1, 'sine', 0.08); sfx(800, 0.15, 'sine', 0.08, 0.08); sfx(1200, 0.2, 'sine', 0.08, 0.16); },
+            shieldBreak() { sfx(300, 0.2, 'sawtooth', 0.1); },
+            hit() { sfx(140, 0.15, 'square', 0.08); sfx(90, 0.25, 'square', 0.06, 0.07); },
+            win() { [659, 784, 988, 1319].forEach((f, i) => sfx(f, 0.14, 'square', 0.06, i * 0.1)); },
+            unlock() { ensure(); },
+            startMusic() {
+                if (musicOn) return;
+                const c = ensure(); if (!c) return;
+                musicOn = true; evIdx = 0; loopBase = c.currentTime + 0.1;
+                timer = setInterval(scheduleMusic, 120);
             },
-            stop() {
-                playing = false;
-                if (loopTimer) { clearTimeout(loopTimer); loopTimer = null; }
-            },
+            suspend() { if (actx && actx.state === 'running') actx.suspend().catch(() => {}); },
+            resume()  { if (actx && actx.state === 'suspended') actx.resume().catch(() => {}); },
             toggleMute() {
                 muted = !muted;
-                if (masterGain && actx) {
-                    masterGain.gain.setValueAtTime(muted ? 0 : 0.15, actx.currentTime);
-                }
+                if (master && actx) master.gain.setValueAtTime(muted ? 0 : 1, actx.currentTime);
+                try { localStorage.setItem(MUTE_KEY, muted ? '1' : '0'); } catch (_) {}
                 return muted;
             },
             get muted() { return muted; },
-            unlock() { ensure(); },
         };
     })();
 
-    const Storage = {
+    const Store = {
         getBest() {
             try {
                 const v = localStorage.getItem(STORAGE_KEY);
@@ -879,115 +808,449 @@ function resizeCanvas() {
         setBest(n) { try { localStorage.setItem(STORAGE_KEY, String(n)); } catch (_) {} }
     };
 
+    /* =====================================================================
+       СОСТОЯНИЕ
+       ===================================================================== */
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d', { alpha: false });
+
+    let VW = 0, VH = 0, DPR = 1, S = 1;
+    let witchSize = 100, groundH = 54;
+    let basePipeGap = 155, pipeSpeed = 220, pipeSpacing = 300, pipeW = PIPE_CONFIG.width;
+
     const State = {
-        mode: 'menu',
+        mode: 'menu',          // menu | playing | paused | gameover | cutscene | win
         gameMode: 'story',
-        birdY: 0,
-        birdVelocity: 0,
+        birdY: 0, birdVelocity: 0, birdRot: 0,
         pipes: [],
         score: 0,
-        best: Storage.getBest(),
-        frameAccumulator: 0,
+        best: Store.getBest(),
         newRecord: false,
-        currentSpeedMult: 1,
-        currentGap: 0,
+        speedMult: 1,
+        gapNow: 155,
+        lastTop: null,
         time: 0,
         holding: false,
-        cutsceneActive: false,
-        cutsceneT: 0,
-        cutsceneDuration: 2.8,
-        skyTransition: 0,
-        isMirrorWorld: false,
+        bgX: 0, groundX: 0,
+        cutsceneT: 0, cutsceneDuration: 2.8, skyTransition: 0,
+        isMirrorWorld: false, worldBlend: 0,
         mirrorColumnsPassed: 0,
         nextPortalScore: 15,
+        portalPending: false,
+        megaPortalSpawned: false,
         hasShield: false,
-        megaPortalSpawned: false
+        invuln: 0,
+        inputLock: 0,
+        fxT: 0,
     };
 
-    const MAX_SPARKS = 50;
+    /* ---------- Искры (кольцевой буфер, без аллокаций) ---------- */
+    const MAX_SPARKS = 60;
     const sparkPool = [];
-    for (let i = 0; i < MAX_SPARKS; i++) {
-        sparkPool.push({ x: 0, y: 0, vx: 0, vy: 0, life: 0, maxLife: 0, size: 2, color: '#7dffb0', active: false });
-    }
+    for (let i = 0; i < MAX_SPARKS; i++) sparkPool.push({ x: 0, y: 0, vx: 0, vy: 0, life: 0, maxLife: 0.35, size: 2, color: '#7dffb0', active: false });
+    let sparkIdx = 0;
 
     function spawnSpark(x, y, color) {
-        let s = sparkPool.find(item => !item.active);
-        if (!s) s = sparkPool[0];
-        s.x = x;
-        s.y = y;
-        s.vx = (Math.random() - 0.5) * 3;
-        s.vy = (Math.random() - 0.5) * 3;
-        s.life = 20;
-        s.maxLife = 20;
+        const s = sparkPool[sparkIdx];
+        sparkIdx = (sparkIdx + 1) % MAX_SPARKS;
+        s.x = x; s.y = y;
+        s.vx = (Math.random() - 0.5) * 180;
+        s.vy = (Math.random() - 0.5) * 180;
+        s.maxLife = 0.35; s.life = 0.35;
         s.size = 2 + Math.floor(Math.random() * 2);
         s.color = color || '#7dffb0';
         s.active = true;
     }
-
-    function updateSparks() {
-        for (let i = 0; i < sparkPool.length; i++) {
+    function updateSparks(dt) {
+        for (let i = 0; i < MAX_SPARKS; i++) {
             const s = sparkPool[i];
             if (!s.active) continue;
-            s.x += s.vx;
-            s.y += s.vy;
-            s.vy += 0.15;
-            s.life -= 1;
+            s.x += s.vx * dt; s.y += s.vy * dt;
+            s.vy += 540 * dt;
+            s.life -= dt;
             if (s.life <= 0) s.active = false;
         }
     }
+    function drawSparks() {
+        for (let i = 0; i < MAX_SPARKS; i++) {
+            const sp = sparkPool[i];
+            if (!sp.active) continue;
+            ctx.globalAlpha = sp.life / sp.maxLife;
+            ctx.fillStyle = sp.color;
+            ctx.fillRect(Math.floor(sp.x), Math.floor(sp.y), sp.size, sp.size);
+        }
+        ctx.globalAlpha = 1;
+    }
 
-    let rafId = null, lastTime = 0, idleRaf = null;
+    let rafId = null, idleRaf = null, fxRaf = null, lastTime = 0;
 
     const $ = (id) => document.getElementById(id);
     const dom = {
-        menuScreen: $('menuScreen'),
-        gameOverScreen: $('gameOverScreen'),
-        winScreen: $('winScreen'),
-        reviewsScreen: $('reviewsScreen'),
-        cutsceneScreen: $('cutsceneScreen'),
-        cutsceneContent: $('cutsceneContent'),
-        btnStoryMode: $('btnStoryMode'),
-        btnEndlessMode: $('btnEndlessMode'),
-        btnZeroGMode: $('btnZeroGMode'),
-        btnReviews: $('btnReviews'),
-        btnReviewsBack: $('btnReviewsBack'),
-        btnSendReview: $('btnSendReview'),
-        btnRetry: $('btnRetry'),
-        btnToMenu: $('btnToMenu'),
-        btnPlayAgain: $('btnPlayAgain'),
-        btnContinueEndless: $('btnContinueEndless'),
-        btnWinToMenu: $('btnWinToMenu'),
-        btnPause: $('btnPause'),
-        btnMute: $('btnMute'),
-        finalScore: $('finalScore'),
-        bestGameOver: $('bestGameOver'),
-        bestTile: $('bestTile'),
-        goProgress: $('goProgress'),
-        goProgressWrap: $('goProgressWrap'),
-        goFraction: $('goFraction'),
-        goRemaining: $('goRemaining'),
-        goPercent: $('goPercent'),
-        goSubtitle: $('goSubtitle'),
-        bestMenu: $('bestMenu'),
-        bestWin: $('bestWin'),
-        hudScoreValue: $('hudScoreValue'),
-        hudBestValue: $('hudBestValue'),
-        hudBest: $('hudBest'),
-        hudMode: $('hudMode'),
-        hudShield: $('hudShield'),
-        progressHud: $('progressHud'),
-        progressHudFill: $('progressHudFill'),
-        progressHudLeft: $('progressHudLeft'),
-        hintBar: $('hintBar'),
-        witchHero: $('witchHero'),
-        winWitchImg: $('winWitchImg'),
-        reviewName: $('reviewName'),
-        reviewRating: $('reviewRating'),
-        reviewText: $('reviewText'),
-        reviewList: $('reviewList'),
+        menuScreen: $('menuScreen'), gameOverScreen: $('gameOverScreen'), winScreen: $('winScreen'),
+        reviewsScreen: $('reviewsScreen'), cutsceneScreen: $('cutsceneScreen'), cutsceneContent: $('cutsceneContent'),
+        btnStoryMode: $('btnStoryMode'), btnEndlessMode: $('btnEndlessMode'), btnZeroGMode: $('btnZeroGMode'),
+        btnReviews: $('btnReviews'), btnReviewsBack: $('btnReviewsBack'), btnSendReview: $('btnSendReview'),
+        btnRetry: $('btnRetry'), btnToMenu: $('btnToMenu'), btnPlayAgain: $('btnPlayAgain'),
+        btnContinueEndless: $('btnContinueEndless'), btnWinToMenu: $('btnWinToMenu'),
+        btnPause: $('btnPause'), btnMute: $('btnMute'),
+        finalScore: $('finalScore'), bestGameOver: $('bestGameOver'), bestTile: $('bestTile'),
+        goProgress: $('goProgress'), goProgressWrap: $('goProgressWrap'), goFraction: $('goFraction'),
+        goRemaining: $('goRemaining'), goPercent: $('goPercent'), goSubtitle: $('goSubtitle'),
+        bestMenu: $('bestMenu'), bestWin: $('bestWin'),
+        hudScoreValue: $('hudScoreValue'), hudBestValue: $('hudBestValue'), hudBest: $('hudBest'),
+        hudMode: $('hudMode'), hudShield: $('hudShield'),
+        progressHud: $('progressHud'), progressHudFill: $('progressHudFill'), progressHudLeft: $('progressHudLeft'),
+        hintBar: $('hintBar'), witchHero: $('witchHero'), winWitchImg: $('winWitchImg'),
+        reviewName: $('reviewName'), reviewRating: $('reviewRating'), reviewText: $('reviewText'),
         diffSelector: $('diffSelector'),
     };
 
+    /* =====================================================================
+       КЭШ ТЕКСТУР (всё тяжёлое рисуется один раз, а не каждый кадр)
+       ===================================================================== */
+    let bgStrip = null;          // { canvas, w }
+    let groundPattern = null;
+    let groundTileW = 96;
+    let pipeTex = [null, null];  // [обычный мир, зазеркалье]: { body, capTop, capBottom }
+    const sprites = { glowNormal: null, glowMirror: null, glowShield: null, portal: null, beam: null };
+
+    function makeLayer(w, h, scale, fn) {
+        const c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(w * scale));
+        c.height = Math.max(1, Math.round(h * scale));
+        const x = c.getContext('2d');
+        x.scale(scale, scale);
+        x.imageSmoothingEnabled = false;
+        fn(x);
+        return c;
+    }
+
+    /* ---------- Фон ---------- */
+    function buildBackground() {
+        bgStrip = null;
+        if (Assets.isReady(Assets.bg)) {
+            const img = Assets.bg;
+            const tileW = Math.max(1, Math.round(img.naturalWidth * (VH / img.naturalHeight)));
+            const c = document.createElement('canvas');
+            c.width = tileW * 2; c.height = VH;
+            const x = c.getContext('2d');
+            x.imageSmoothingEnabled = true;
+            x.imageSmoothingQuality = 'high';
+            x.drawImage(img, 0, 0, tileW, VH);
+            x.save();
+            x.translate(tileW * 2, 0); x.scale(-1, 1);       // зеркальная копия — бесшовная склейка
+            x.drawImage(img, 0, 0, tileW, VH);
+            x.restore();
+            bgStrip = { canvas: c, w: tileW * 2 };
+            return;
+        }
+        // Запасной фон, если fon.jpg не загрузился
+        const w = Math.max(VW, 800);
+        const c = document.createElement('canvas');
+        c.width = w; c.height = VH;
+        const x = c.getContext('2d');
+        const g = x.createLinearGradient(0, 0, 0, VH);
+        g.addColorStop(0, '#0d0518'); g.addColorStop(0.6, '#2a1250'); g.addColorStop(1, '#4a2870');
+        x.fillStyle = g; x.fillRect(0, 0, w, VH);
+        let seed = 12345;
+        const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+        x.fillStyle = 'rgba(255,255,255,0.8)';
+        for (let i = 0; i < 90; i++) x.fillRect(Math.floor(rnd() * w), Math.floor(rnd() * VH * 0.6), 2, 2);
+        x.fillStyle = '#12081f';
+        x.beginPath(); x.moveTo(0, VH);
+        for (let px = 0; px <= w; px += 8) {
+            const a = (px / w) * Math.PI * 2;
+            x.lineTo(px, VH * 0.78 - 26 * Math.sin(a * 2) - 14 * Math.sin(a * 5 + 1));
+        }
+        x.lineTo(w, VH); x.closePath(); x.fill();
+        bgStrip = { canvas: c, w };
+    }
+
+    function drawBackground() {
+        if (!bgStrip) { ctx.fillStyle = '#0d0518'; ctx.fillRect(0, 0, VW, VH); return; }
+        const w = bgStrip.w;
+        const off = -(State.bgX % w);
+        for (let x = Math.round(off); x < VW; x += w) ctx.drawImage(bgStrip.canvas, x, 0, w, VH);
+        if (State.worldBlend > 0.01) {
+            ctx.globalAlpha = 0.26 * State.worldBlend;
+            ctx.fillStyle = '#ff00ff';
+            ctx.fillRect(0, 0, VW, VH);
+            ctx.globalAlpha = 1;
+        }
+    }
+
+    /* ---------- Земля ---------- */
+    function buildGround() {
+        const tw = groundTileW;
+        const tile = makeLayer(tw, groundH, DPR, (c) => {
+            c.fillStyle = '#120a1a'; c.fillRect(0, 0, tw, groundH);
+            c.fillStyle = '#3d2440'; c.fillRect(0, 0, tw, 5);
+            c.fillStyle = '#7a5280'; c.fillRect(0, 0, tw, 2);
+            c.fillStyle = 'rgba(255,140,0,0.55)'; c.fillRect(0, 5, tw, 1);
+            const rows = Math.max(1, Math.floor((groundH - 8) / 16));
+            for (let r = 0; r < rows; r++) {
+                const y = 8 + r * 16;
+                const shift = (r % 2) * 24;
+                for (let x = -24 + shift; x < tw; x += 48) {
+                    c.fillStyle = '#2d1a2e'; c.fillRect(x + 1, y, 46, 14);
+                    c.fillStyle = '#1a0f1f'; c.fillRect(x + 1, y + 12, 46, 2);
+                    c.fillStyle = '#4d2e52'; c.fillRect(x + 1, y, 46, 2);
+                }
+            }
+            c.fillStyle = 'rgba(0,0,0,0.35)'; c.fillRect(0, groundH - 6, tw, 6);
+        });
+        groundPattern = ctx.createPattern(tile, 'repeat');
+        try { if (groundPattern && groundPattern.setTransform) groundPattern.setTransform(new DOMMatrix([1 / DPR, 0, 0, 1 / DPR, 0, 0])); } catch (_) {}
+    }
+
+    function drawGround(dy) {
+        if (!groundPattern || dy >= groundH) return;
+        const off = Math.round(State.groundX % groundTileW);
+        ctx.save();
+        ctx.translate(-off, VH - groundH + Math.round(dy));
+        ctx.fillStyle = groundPattern;
+        ctx.fillRect(0, 0, VW + groundTileW, groundH);
+        if (State.worldBlend > 0.01) {
+            ctx.globalAlpha = 0.25 * State.worldBlend;
+            ctx.fillStyle = '#ff00ff';
+            ctx.fillRect(0, 0, VW + groundTileW, groundH);
+        }
+        ctx.restore();
+    }
+
+    /* ---------- Колонны ---------- */
+    function paintRune(c, cx, cy, seed, m) {
+        const runes = [
+            [[0, -6], [5, 4], [-5, 4], [3, -2], [-3, -2]],
+            [[0, -6], [0, 6], [-5, 0], [5, 0]],
+            [[-3, -6], [3, -2], [-2, 1], [3, 6]],
+            [[-6, 0], [-3, -3], [3, -3], [6, 0], [3, 3], [-3, 3]],
+        ];
+        const rune = runes[seed % runes.length];
+        c.save();
+        c.translate(cx, cy);
+        c.shadowColor = m ? '#00ffff' : '#ff8c00';
+        c.shadowBlur = 8;
+        c.strokeStyle = m ? '#a0ffff' : '#ffb347';
+        c.lineWidth = 2; c.lineCap = 'round'; c.lineJoin = 'round';
+        c.beginPath();
+        for (let i = 0; i < rune.length; i++) {
+            const rx = rune[i][0] * 1.2, ry = rune[i][1] * 1.2;
+            if (i === 0) c.moveTo(rx, ry); else c.lineTo(rx, ry);
+        }
+        if (seed % 2 === 0) c.closePath();
+        c.stroke();
+        c.restore();
+    }
+
+    function paintPipeBody(c, w, h, m) {
+        c.fillStyle = m ? '#220033' : '#1a0f1f'; c.fillRect(0, 0, w, h);
+        c.fillStyle = m ? '#440055' : '#2d1a2e'; c.fillRect(2, 0, w - 4, h);
+        c.fillStyle = m ? '#660088' : '#3d2440'; c.fillRect(8, 0, w - 16, h);
+        c.fillStyle = m ? '#8800aa' : '#4d2e52'; c.fillRect(8, 0, 6, h);
+        c.fillStyle = '#0a0510';
+        c.fillRect(0, 0, 2, h); c.fillRect(w - 2, 0, 2, h);
+
+        const brickH = 22;
+        c.fillStyle = 'rgba(0,0,0,0.35)';
+        for (let by = brickH; by < h; by += brickH) c.fillRect(2, by, w - 4, 2);
+        c.fillStyle = 'rgba(0,0,0,0.25)';
+        for (let by = 0, row = 0; by < h; by += brickH, row++) {
+            const offset = (row % 2) * (w / 4) + w / 4;
+            for (let bx = offset; bx < w - 4; bx += w / 2) c.fillRect(bx, by + 2, 2, brickH - 4);
+        }
+
+        const runeCount = Math.max(2, Math.floor(h / 90));
+        const spacing = h / (runeCount + 1);
+        for (let i = 1; i <= runeCount; i++) paintRune(c, w / 2, spacing * i, i, m);
+
+        c.save();
+        c.globalCompositeOperation = 'lighter';
+        c.fillStyle = m ? 'rgba(0,255,255,0.08)' : 'rgba(255,140,0,0.06)';
+        c.fillRect(4, 0, w - 8, h);
+        c.restore();
+    }
+
+    function paintBat(c, cx, cy, m) {
+        c.save();
+        c.translate(cx, cy);
+        c.fillStyle = '#0a0510';
+        c.fillRect(-10, -2, 5, 3); c.fillRect(-10, -3, 3, 1); c.fillRect(-7, -1, 3, 2);
+        c.fillRect(-3, -2, 6, 5);
+        c.fillRect(5, -1, 3, 2); c.fillRect(7, -3, 3, 1); c.fillRect(5, -2, 5, 3);
+        c.fillStyle = m ? '#00ffff' : '#ff8c00';
+        c.fillRect(-2, -1, 1, 1); c.fillRect(1, -1, 1, 1);
+        c.restore();
+    }
+
+    function paintWeb(c, x, y, side) {
+        c.save();
+        c.translate(x, y);
+        c.strokeStyle = 'rgba(220,220,220,0.5)';
+        c.lineWidth = 1;
+        c.beginPath();
+        const dir = side === 'right' ? 1 : -1;
+        c.moveTo(0, 0); c.lineTo(6 * dir, 2);
+        c.moveTo(0, 0); c.lineTo(4 * dir, 5);
+        c.moveTo(0, 0); c.lineTo(2 * dir, 7);
+        c.stroke();
+        c.restore();
+    }
+
+    // Локальные координаты шапки: колонна начинается в x = CAP_PAD_X, шапка — в y = CAP_PAD_Y
+    const CAP_PAD_X = 12, CAP_PAD_Y = 10;
+    function paintCap(c, w, capH, m, isTop) {
+        const x = CAP_PAD_X, capY = CAP_PAD_Y;
+        c.fillStyle = '#0a0510'; c.fillRect(x - 6, capY - 2, w + 12, capH + 4);
+        c.fillStyle = m ? '#550077' : '#3d2440'; c.fillRect(x - 4, capY, w + 8, capH);
+        c.fillStyle = m ? '#7700aa' : '#5a3a5e'; c.fillRect(x - 4, capY, w + 8, 4);
+        c.fillStyle = m ? '#aa00ff' : '#7a5280'; c.fillRect(x - 4, capY, w + 8, 2);
+        c.fillStyle = '#1a0f1f'; c.fillRect(x - 4, capY + capH - 3, w + 8, 3);
+        paintBat(c, x + w / 2, capY + capH / 2, m);
+        paintWeb(c, x - 4, capY, isTop ? 'left' : 'right');
+        paintWeb(c, x + w + 4, capY, isTop ? 'right' : 'left');
+
+        c.save();
+        c.globalCompositeOperation = 'lighter';
+        const glowY = isTop ? capY + capH : capY;
+        const gg = c.createLinearGradient(0, glowY - 4, 0, glowY + (isTop ? 6 : -6));
+        gg.addColorStop(0, 'rgba(255,140,0,0)');
+        gg.addColorStop(0.5, m ? 'rgba(0,255,255,0.4)' : 'rgba(255,140,0,0.4)');
+        gg.addColorStop(1, 'rgba(255,140,0,0)');
+        c.fillStyle = gg;
+        c.fillRect(x - 4, glowY - 4, w + 8, 10);
+        c.restore();
+    }
+
+    function buildPipeTextures() {
+        const w = pipeW, capH = PIPE_CONFIG.capHeight;
+        for (let m = 0; m < 2; m++) {
+            pipeTex[m] = {
+                body: makeLayer(w, VH, DPR, (c) => paintPipeBody(c, w, VH, m)),
+                capTop: makeLayer(w + 24, capH + 20, DPR, (c) => paintCap(c, w, capH, m, true)),
+                capBottom: makeLayer(w + 24, capH + 20, DPR, (c) => paintCap(c, w, capH, m, false)),
+            };
+        }
+    }
+
+    function drawPipe(pipe) {
+        const x = Math.round(pipe.x);
+        if (pipe.isMegaPortal) { drawMegaGate(pipe, x); return; }
+        const tex = pipeTex[State.isMirrorWorld ? 1 : 0];
+        if (!tex) return;
+        const capH = PIPE_CONFIG.capHeight;
+        const topH = Math.round(pipe.topHeight);
+        const bottomY = topH + Math.round(pipe.gap);
+        const botH = VH - bottomY;
+        const k = tex.body.height / VH;                  // пикселей текстуры на 1 CSS-пиксель
+
+        if (pipe.broken) ctx.globalAlpha = 0.35;
+        if (topH > 0) ctx.drawImage(tex.body, 0, 0, tex.body.width, topH * k, x, 0, pipeW, topH);
+        if (botH > 0) ctx.drawImage(tex.body, 0, tex.body.height - botH * k, tex.body.width, botH * k, x, bottomY, pipeW, botH);
+        ctx.drawImage(tex.capTop, x - CAP_PAD_X, topH - capH - CAP_PAD_Y, pipeW + 24, capH + 20);
+        ctx.drawImage(tex.capBottom, x - CAP_PAD_X, bottomY - CAP_PAD_Y, pipeW + 24, capH + 20);
+        if (pipe.broken) ctx.globalAlpha = 1;
+
+        if (pipe.hasPortal && !pipe.portalCollected && sprites.portal) {
+            const size = 64 + Math.sin(State.time * 8) * 7;
+            ctx.drawImage(sprites.portal, x + pipeW / 2 - size / 2, pipe.portalY - size / 2, size, size);
+        }
+    }
+
+    function drawMegaGate(pipe, x) {
+        if (pipe.portalCollected) return;
+        const cx = x + pipeW / 2;
+        if (sprites.beam) {
+            ctx.globalAlpha = 0.55 + 0.25 * Math.sin(State.time * 6);
+            ctx.drawImage(sprites.beam, Math.round(cx - 80), 0, 160, VH);
+            ctx.globalAlpha = 1;
+        }
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 20px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🛡️ ВЫХОД ИЗ ЗАЗЕРКАЛЬЯ 🛡️', cx, VH * 0.5 - 120);
+    }
+
+    /* ---------- Спрайты: свечение ведьмочки, порталы ---------- */
+    function makeGlow(radius, color) {
+        const size = Math.ceil(radius * 2);
+        const canvasEl = makeLayer(size, size, DPR, (c) => {
+            const g = c.createRadialGradient(radius, radius, 4, radius, radius, radius);
+            g.addColorStop(0, color); g.addColorStop(1, 'rgba(0,0,0,0)');
+            c.fillStyle = g; c.fillRect(0, 0, size, size);
+        });
+        return { canvas: canvasEl, size };
+    }
+
+    function buildSprites() {
+        sprites.glowNormal = makeGlow(witchSize * 0.9, 'rgba(125,255,176,0.35)');
+        sprites.glowMirror = makeGlow(witchSize * 0.9, 'rgba(255,0,255,0.4)');
+        sprites.glowShield = makeGlow(witchSize * 1.2, 'rgba(0,255,255,0.6)');
+        sprites.portal = makeLayer(80, 80, DPR, (c) => {
+            const g = c.createRadialGradient(40, 40, 2, 40, 40, 36);
+            g.addColorStop(0, '#ffffff'); g.addColorStop(0.5, '#ff00ff'); g.addColorStop(1, 'rgba(255,0,255,0)');
+            c.fillStyle = g; c.beginPath(); c.arc(40, 40, 36, 0, Math.PI * 2); c.fill();
+            c.strokeStyle = '#ff00ff'; c.lineWidth = 3;
+            c.beginPath(); c.arc(40, 40, 24, 0, Math.PI * 2); c.stroke();
+            c.fillStyle = '#ffffff'; c.font = 'bold 18px "Courier New"';
+            c.textAlign = 'center'; c.textBaseline = 'middle';
+            c.fillText('🌀', 40, 41);
+        });
+        sprites.beam = makeLayer(160, VH, 1, (c) => {
+            const g = c.createLinearGradient(0, 0, 160, 0);
+            g.addColorStop(0, 'rgba(0,255,255,0)');
+            g.addColorStop(0.5, 'rgba(255,255,255,0.9)');
+            g.addColorStop(1, 'rgba(0,255,255,0)');
+            c.fillStyle = g; c.fillRect(0, 0, 160, VH);
+        });
+    }
+
+    function buildTextures() {
+        buildBackground();
+        buildGround();
+        buildPipeTextures();
+        buildSprites();
+    }
+
+    /* =====================================================================
+       РАЗМЕРЫ
+       ===================================================================== */
+    function computeParams() {
+        const st = DIFFICULTY_SETTINGS[currentDifficulty];
+        S = clamp(VH / 720, 0.7, 1.4);
+        witchSize = Math.round(clamp(VH * 0.13, WITCH_CONFIG.minSize, WITCH_CONFIG.maxSize));
+        groundH = Math.round(Math.max(44, VH * 0.075));
+        basePipeGap = Math.max(CONFIG.PIPE_GAP_MIN, Math.round(VH * CONFIG.PIPE_GAP_RATIO * st.gapMult));
+        pipeSpeed = clamp(VW * CONFIG.SPEED_RATIO, CONFIG.SPEED_MIN, CONFIG.SPEED_MAX) * st.speedMult;
+        pipeSpacing = clamp(VW * CONFIG.SPACING_RATIO, CONFIG.SPACING_MIN, CONFIG.SPACING_MAX);
+        pipeW = PIPE_CONFIG.width;
+    }
+
+    function rescaleWorld(k) {
+        State.birdY *= k;
+        State.gapNow *= k;
+        if (State.lastTop !== null) State.lastTop *= k;
+        for (const p of State.pipes) { p.topHeight *= k; p.gap *= k; p.portalY *= k; }
+    }
+
+    function resizeCanvas() {
+        const oldVH = VH;
+        DPR = Math.min(window.devicePixelRatio || 1, CONFIG.MAX_DPR);
+        VW = window.innerWidth;
+        VH = window.innerHeight;
+        canvas.width = Math.round(VW * DPR);
+        canvas.height = Math.round(VH * DPR);
+        ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+        computeParams();
+        if (oldVH && oldVH !== VH) rescaleWorld(VH / oldVH);
+        buildTextures();
+        if (State.mode !== 'playing' && State.mode !== 'cutscene') draw();
+    }
+
+    /* =====================================================================
+       UI
+       ===================================================================== */
     function renderMenuWitch() {
         dom.witchHero.innerHTML = '';
         if (Assets.isReady(Assets.witch)) {
@@ -1015,36 +1278,25 @@ function resizeCanvas() {
         dom.progressHudLeft.textContent = 'WITCH ' + State.score + ' / ' + CONFIG.PIPES_TO_WIN;
     }
 
-    function updateShieldHud() {
-        if (dom.hudShield) {
-            dom.hudShield.hidden = !State.hasShield;
-        }
-    }
+    function updateShieldHud() { dom.hudShield.hidden = !State.hasShield; }
 
     function updateGameOverProgress() {
-        if (State.gameMode !== 'story') {
-            dom.goProgressWrap.hidden = true;
-            return;
-        }
+        if (State.gameMode !== 'story') { dom.goProgressWrap.hidden = true; return; }
         dom.goProgressWrap.hidden = false;
         const pct = Math.min(100, (State.score / CONFIG.PIPES_TO_WIN) * 100);
-        const remaining = Math.max(0, CONFIG.PIPES_TO_WIN - State.score);
         dom.goFraction.textContent = State.score + ' / ' + CONFIG.PIPES_TO_WIN;
-        dom.goRemaining.textContent = 'ОСТАЛОСЬ ' + remaining;
+        dom.goRemaining.textContent = 'ОСТАЛОСЬ ' + Math.max(0, CONFIG.PIPES_TO_WIN - State.score);
         dom.goPercent.textContent = Math.round(pct) + '%';
         dom.goProgress.style.transition = 'none';
         dom.goProgress.style.width = '0%';
         void dom.goProgress.offsetWidth;
         dom.goProgress.style.transition = '';
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                dom.goProgress.style.width = pct + '%';
-            });
-        });
+        requestAnimationFrame(() => requestAnimationFrame(() => { dom.goProgress.style.width = pct + '%'; }));
     }
 
     function show(el) { el.classList.remove('hidden'); }
     function hide(el) { el.classList.add('hidden'); }
+    function isReviewsOpen() { return !dom.reviewsScreen.classList.contains('hidden'); }
 
     function updateBestDisplays() {
         const b = State.best;
@@ -1055,89 +1307,107 @@ function resizeCanvas() {
     }
     function updateHudScore() { dom.hudScoreValue.textContent = State.score; }
 
-    function currentGap() {
-        if (State.gameMode === 'endless' || State.gameMode === 'zerog') return State.currentGap;
-        return basePipeGap;
+    /* =====================================================================
+       ИГРОВАЯ ЛОГИКА
+       ===================================================================== */
+    function currentSpeed() { return pipeSpeed * State.speedMult; }
+
+    function applyProgression() {
+        if (State.gameMode !== 'endless') return;
+        const steps = Math.floor(State.score / CONFIG.ENDLESS_SPEEDUP_EVERY);
+        State.speedMult = Math.min(CONFIG.ENDLESS_SPEED_MAX, 1 + steps * CONFIG.ENDLESS_SPEEDUP_FACTOR);
+        const floorGap = Math.max(CONFIG.ENDLESS_GAP_MIN, witchSize * 1.7);
+        State.gapNow = Math.min(basePipeGap, Math.max(floorGap, basePipeGap * Math.pow(CONFIG.ENDLESS_GAP_SHRINK, steps)));
     }
-    function currentSpeed() { return pipeSpeed * State.currentSpeedMult; }
 
-    function generatePipe() {
-        const gap = currentGap();
+    function generatePipe(x) {
+        const gap = State.gapNow;
+        const st = DIFFICULTY_SETTINGS[currentDifficulty];
         const minTop = VH * CONFIG.PIPE_MIN_TOP_RATIO;
-        const maxTop = VH - gap - minTop - VH * CONFIG.PIPE_MAX_BOTTOM_RATIO;
-        const topHeight = Math.floor(Math.random() * Math.max(30, maxTop - minTop)) + minTop;
-        
-        let hasPortal = false;
+        const maxTop = Math.max(minTop + 10, VH - groundH - gap - 30);
+
+        let lo = minTop, hi = maxTop;
+        if (State.lastTop !== null) {
+            const d = VH * CONFIG.PIPE_MAX_STEP_RATIO;
+            lo = Math.max(lo, State.lastTop - d);
+            hi = Math.min(hi, State.lastTop + d);
+            if (lo > hi) lo = hi;
+        }
+        const topHeight = lo + Math.random() * (hi - lo);
+
+        let hasPortal = false, isMegaPortal = false;
         let portalY = topHeight + gap / 2;
-        let isMegaPortal = false;
 
-        const settings = DIFFICULTY_SETTINGS[currentDifficulty];
-
-        if (State.isMirrorWorld && State.mirrorColumnsPassed >= settings.mirrorPassedReq && !State.megaPortalSpawned) {
-            isMegaPortal = true;
+        if (State.isMirrorWorld) {
+            if (!State.megaPortalSpawned && State.mirrorColumnsPassed >= st.mirrorPassedReq) {
+                isMegaPortal = true; hasPortal = true;
+                portalY = VH / 2;
+                State.megaPortalSpawned = true;
+            }
+        } else if (!State.portalPending && State.score >= State.nextPortalScore) {
             hasPortal = true;
-            portalY = VH / 2;
-            State.megaPortalSpawned = true;
-        } else if (!State.isMirrorWorld && State.score >= State.nextPortalScore && !hasPortal) {
-            hasPortal = true;
+            State.portalPending = true;
         }
 
-        return { x: VW + 20, topHeight, passed: false, hasPortal, portalY, isMegaPortal, portalCollected: false };
+        if (!isMegaPortal) State.lastTop = topHeight;
+        return { x, topHeight, gap, passed: false, hasPortal, portalY, isMegaPortal, portalCollected: false, broken: false };
+    }
+
+    function spawnPipes() {
+        const pipes = State.pipes;
+        const last = pipes[pipes.length - 1];
+        const birdX = VW * CONFIG.BIRD_X_RATIO;
+        if (!last) pipes.push(generatePipe(Math.min(VW + 20, birdX + 650)));
+        else if (last.x <= VW + 20 - pipeSpacing) pipes.push(generatePipe(Math.max(VW + 20, last.x + pipeSpacing)));
     }
 
     function resetGame(mode) {
-        resizeCanvas();
-        const settings = DIFFICULTY_SETTINGS[currentDifficulty];
-        
+        computeParams();
+        const st = DIFFICULTY_SETTINGS[currentDifficulty];
+
         State.gameMode = mode || 'story';
-        State.birdY = VH / 2;
+        State.birdY = VH / 2 - witchSize / 2;
         State.birdVelocity = 0;
-        State.pipes = [];
+        State.birdRot = 0;
+        State.pipes.length = 0;
+        State.lastTop = null;
         State.score = 0;
-        State.frameAccumulator = 0;
         State.newRecord = false;
-        State.currentSpeedMult = 1;
-        State.currentGap = basePipeGap;
-        sparkPool.forEach(s => s.active = false);
+        State.speedMult = 1;
+        State.gapNow = basePipeGap;
+        for (const s of sparkPool) s.active = false;
         State.holding = false;
-        State.cutsceneActive = false;
         State.cutsceneT = 0;
         State.skyTransition = 0;
         State.isMirrorWorld = false;
+        State.worldBlend = 0;
         State.mirrorColumnsPassed = 0;
-        State.nextPortalScore = settings.portalMinScore + Math.floor(Math.random() * settings.portalRandomAdd);
-        State.hasShield = false;
+        State.nextPortalScore = st.portalMinScore + Math.floor(Math.random() * st.portalRandomAdd);
+        State.portalPending = false;
         State.megaPortalSpawned = false;
+        State.hasShield = false;
+        State.invuln = 0;
         updateShieldHud();
-        if (dom.cutsceneScreen) dom.cutsceneScreen.classList.add('hidden');
+        hide(dom.cutsceneScreen);
         updateHudScore();
         updateBottomProgress();
-        
+
         const diffLabel = currentDifficulty === 'easy' ? '🌱' : currentDifficulty === 'hard' ? '🔥' : '';
-        if (State.gameMode === 'endless') {
-            dom.hudMode.textContent = '∞ ENDLESS ' + diffLabel;
-            dom.hudMode.hidden = false;
-        } else if (State.gameMode === 'zerog') {
-            dom.hudMode.textContent = '🪁 ZERO-G ' + diffLabel;
-            dom.hudMode.hidden = false;
-        } else {
-            dom.hudMode.textContent = '✦ STORY ' + diffLabel;
-            dom.hudMode.hidden = false;
-        }
+        dom.hudMode.textContent =
+            State.gameMode === 'endless' ? '∞ ENDLESS ' + diffLabel :
+            State.gameMode === 'zerog'   ? '🪁 ZERO-G ' + diffLabel :
+                                           '✦ STORY ' + diffLabel;
+        dom.hudMode.hidden = false;
     }
 
     function startGame(mode) {
-        Audio.unlock();
-        Music.unlock();
-        Music.start();
-        stopIdle();
+        Sound.unlock();
+        Sound.startMusic();
+        stopIdle(); stopFx(); cancelLoop();
+        if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
         resetGame(mode);
         State.mode = 'playing';
-        hide(dom.menuScreen);
-        hide(dom.gameOverScreen);
-        hide(dom.winScreen);
-        hide(dom.reviewsScreen);
-        if (dom.cutsceneScreen) dom.cutsceneScreen.classList.add('hidden');
+        hide(dom.menuScreen); hide(dom.gameOverScreen); hide(dom.winScreen); hide(dom.reviewsScreen);
         dom.btnPause.hidden = false;
         dom.hintBar.classList.add('hidden');
         dom.progressHud.classList.add('visible');
@@ -1145,57 +1415,51 @@ function resizeCanvas() {
             State.birdVelocity = 0;
             dom.hintBar.textContent = 'ДЕРЖИ — ВВЕРХ · ОТПУСТИ — ВНИЗ · P — ПАУЗА';
         } else {
-            State.birdVelocity = CONFIG.JUMP_FORCE;
+            State.birdVelocity = -PHYS.JUMP_VELOCITY * S;
             dom.hintBar.textContent = 'SPACE / ↑ / CLICK — ВЗМАХ · P — ПАУЗА';
         }
-        cancelLoop();
         lastTime = performance.now();
         rafId = requestAnimationFrame(gameLoop);
     }
 
     function continueEndless() {
         const keepScore = State.score;
-        const keepBest = State.best;
         startGame('endless');
         State.score = keepScore;
-        State.best = keepBest;
-        const steps = Math.floor(State.score / CONFIG.ENDLESS_SPEEDUP_EVERY);
-        State.currentSpeedMult = 1 + steps * CONFIG.ENDLESS_SPEEDUP_FACTOR;
-        State.currentGap = Math.max(
-            CONFIG.ENDLESS_GAP_MIN,
-            basePipeGap * Math.pow(CONFIG.ENDLESS_GAP_SHRINK, steps)
-        );
+        const st = DIFFICULTY_SETTINGS[currentDifficulty];
+        State.nextPortalScore = keepScore + st.portalMinScore + Math.floor(Math.random() * st.portalRandomAdd);
+        applyProgression();
         updateHudScore();
         updateBottomProgress();
     }
 
     function goToMenu() {
         State.mode = 'menu';
-        cancelLoop();
-        stopIdle();
-        hide(dom.gameOverScreen);
-        hide(dom.winScreen);
-        hide(dom.reviewsScreen);
-        if (dom.cutsceneScreen) dom.cutsceneScreen.classList.add('hidden');
-        if (dom.cutsceneContent) dom.cutsceneContent.classList.remove('visible');
+        cancelLoop(); stopFx(); stopIdle();
+        hide(dom.gameOverScreen); hide(dom.winScreen); hide(dom.reviewsScreen);
+        hide(dom.cutsceneScreen);
+        dom.cutsceneContent.classList.remove('visible');
         show(dom.menuScreen);
         dom.btnPause.hidden = true;
         dom.hudMode.hidden = true;
         dom.progressHud.classList.remove('visible');
         dom.hintBar.classList.remove('hidden');
         dom.hintBar.textContent = 'SPACE / ↑ / CLICK — ВЗМАХ · P — ПАУЗА';
-        State.pipes = [];
+        State.pipes.length = 0;
         State.score = 0;
         State.gameMode = 'story';
         State.holding = false;
-        State.cutsceneActive = false;
         State.cutsceneT = 0;
         State.skyTransition = 0;
         State.isMirrorWorld = false;
+        State.worldBlend = 0;
         State.hasShield = false;
+        State.invuln = 0;
+        State.birdRot = 0;
+        State.birdVelocity = 0;
         updateShieldHud();
         updateBestDisplays();
-        State.birdY = VH / 2;
+        State.birdY = VH / 2 - witchSize / 2;
         draw();
         startIdle();
     }
@@ -1218,86 +1482,94 @@ function resizeCanvas() {
     }
 
     function pressJump() {
-        if (State.mode === 'menu') { startGame('story'); return; }
+        const now = performance.now();
+        if (State.mode === 'menu') { if (!isReviewsOpen()) startGame('story'); return; }
         if (State.mode === 'gameover' || State.mode === 'win') {
-            startGame(State.gameMode);
+            if (now >= State.inputLock) startGame(State.gameMode);
             return;
         }
-        if (State.mode === 'cutscene') {
-            State.cutsceneT = State.cutsceneDuration;
-            return;
-        }
+        if (State.mode === 'cutscene') { State.cutsceneT = State.cutsceneDuration; return; }
         if (State.mode === 'paused') { togglePause(); return; }
-        if (State.mode === 'playing') {
-            State.holding = true;
-            if (State.gameMode !== 'zerog') {
-                if (State.isMirrorWorld) {
-                    State.birdVelocity = -CONFIG.JUMP_FORCE; 
-                } else {
-                    State.birdVelocity = CONFIG.JUMP_FORCE; 
-                }
-            }
-            Audio.jump();
-            const birdX = VW * CONFIG.BIRD_X_RATIO;
-            for (let i = 0; i < 3; i++) {
-                spawnSpark(
-                    birdX + 20 + Math.random() * 20,
-                    State.birdY + 20 + Math.random() * 10,
-                    State.isMirrorWorld ? '#00ffff' : '#7dffb0'
-                );
-            }
+        if (State.mode !== 'playing') return;
+
+        State.holding = true;
+        const dir = State.isMirrorWorld ? -1 : 1;
+        if (State.gameMode !== 'zerog') State.birdVelocity = -dir * PHYS.JUMP_VELOCITY * S;
+        Sound.jump();
+        const birdX = VW * CONFIG.BIRD_X_RATIO;
+        for (let i = 0; i < 3; i++) {
+            spawnSpark(birdX + witchSize * 0.2 + Math.random() * 20,
+                       State.birdY + witchSize * (dir === 1 ? 0.7 : 0.3) + Math.random() * 10,
+                       State.isMirrorWorld ? '#00ffff' : '#7dffb0');
         }
     }
 
-    function releaseJump() {
-        State.holding = false;
-        if (State.mode === 'playing' && State.gameMode === 'zerog') {
-            if (State.birdVelocity < 0) {
-                State.birdVelocity *= CONFIG.ZEROG_RELEASE_DAMP;
-            }
+    function releaseJump() { State.holding = false; }
+
+    /* ---------- Физика ---------- */
+    function stepBird(h) {
+        const dir = State.isMirrorWorld ? -1 : 1;
+        const v0 = State.birdVelocity;
+        let v = v0;
+
+        if (State.gameMode === 'zerog') {
+            let a = PHYS.ZEROG_GRAVITY * S * dir;
+            if (State.holding) a -= PHYS.ZEROG_THRUST * S * dir;
+            v += a * h;
+            v *= Math.exp(-PHYS.ZEROG_DRAG * h);
+            const m = PHYS.ZEROG_MAX * S;
+            v = clamp(v, -m, m);
+        } else {
+            let g = PHYS.GRAVITY * S * dir;
+            if (Math.abs(v) < PHYS.APEX_THRESHOLD * S) g *= PHYS.APEX_GRAVITY_MULT;
+            v += g * h;
+            const along = v * dir;
+            if (along > PHYS.MAX_FALL * S) v = dir * PHYS.MAX_FALL * S;
+            else if (along < -PHYS.MAX_RISE * S) v = -dir * PHYS.MAX_RISE * S;
         }
+        State.birdVelocity = v;
+        State.birdY += (v0 + v) * 0.5 * h;     // трапеции — точнее и плавнее простого Эйлера
+
+        const pitch = clamp(v * dir / S * PHYS.ROT_PER_VEL, PHYS.ROT_MIN, PHYS.ROT_MAX);
+        State.birdRot += (pitch * dir - State.birdRot) * (1 - Math.exp(-PHYS.ROT_SMOOTH * h));
+    }
+
+    function breakShield() {
+        State.hasShield = false;
+        State.invuln = 0.9;
+        updateShieldHud();
+        Sound.shieldBreak();
+        const cx = VW * CONFIG.BIRD_X_RATIO + witchSize / 2, cy = State.birdY + witchSize / 2;
+        for (let i = 0; i < 14; i++) spawnSpark(cx, cy, '#00ffff');
     }
 
     function checkCollision() {
         const birdX = VW * CONFIG.BIRD_X_RATIO;
-        const w = WITCH_CONFIG.width;
-        const h = WITCH_CONFIG.height;
-        const padX = WITCH_CONFIG.hitboxPaddingX;
-        const padY = WITCH_CONFIG.hitboxPaddingY;
+        const W = witchSize;
+        const padX = W * WITCH_CONFIG.hitboxPadX, padY = W * WITCH_CONFIG.hitboxPadY;
+        const bL = birdX + padX, bR = birdX + W - padX;
+        const bT = State.birdY + padY, bB = State.birdY + W - padY;
+        const floorY = VH - groundH;
 
-        const hitTop = State.birdY + padY;
-        const hitBottom = State.birdY + h - padY;
-        
-        if (hitTop <= 0 || hitBottom >= VH - 40) {
-            if (State.hasShield) {
-                State.hasShield = false;
-                updateShieldHud();
-                Audio.shieldBreak();
-                State.birdVelocity = -State.birdVelocity;
+        if (bT <= 0 || bB >= floorY) {
+            if (State.hasShield || State.invuln > 0) {
+                if (State.hasShield) breakShield();
+                if (bT <= 0) { State.birdY = -padY + 1; State.birdVelocity = Math.abs(State.birdVelocity) * 0.6; }
+                else         { State.birdY = floorY - (W - padY) - 1; State.birdVelocity = -Math.abs(State.birdVelocity) * 0.6; }
                 return false;
             }
             return true;
         }
 
-        const bL = birdX + padX;
-        const bR = birdX + w - padX;
-        const bT = State.birdY + padY;
-        const bB = State.birdY + h - padY;
-
-        const gap = currentGap();
-        for (const pipe of State.pipes) {
-            const pR = pipe.x + pipeW;
-            if (pipe.isMegaPortal && !pipe.portalCollected) continue;
-
-            if (bR > pipe.x && bL < pR) {
-                if (bT < pipe.topHeight || bB > pipe.topHeight + gap) {
-                    if (State.hasShield) {
-                        State.hasShield = false;
-                        updateShieldHud();
-                        Audio.shieldBreak();
-                        pipe.x = -200;
-                        return false;
-                    }
+        const ov = PIPE_CONFIG.capOverhang;
+        const pipes = State.pipes;
+        for (let i = 0; i < pipes.length; i++) {
+            const pipe = pipes[i];
+            if (pipe.isMegaPortal || pipe.broken) continue;
+            if (bR > pipe.x - ov && bL < pipe.x + pipeW + ov) {
+                if (bT < pipe.topHeight || bB > pipe.topHeight + pipe.gap) {
+                    if (State.invuln > 0) continue;
+                    if (State.hasShield) { breakShield(); pipe.broken = true; continue; }
                     return true;
                 }
             }
@@ -1305,11 +1577,113 @@ function resizeCanvas() {
         return false;
     }
 
+    /* Возвращает true, если режим сменился (смерть / победа) */
+    function updatePipes(dx) {
+        const birdX = VW * CONFIG.BIRD_X_RATIO;
+        const cx = birdX + witchSize / 2, cy = State.birdY + witchSize / 2;
+        const st = DIFFICULTY_SETTINGS[currentDifficulty];
+        const pipes = State.pipes;
+        let w = 0, scored = false;
+
+        for (let i = 0; i < pipes.length; i++) {
+            const pipe = pipes[i];
+            pipe.x -= dx;
+
+            if (pipe.x + pipeW < -12) {
+                if (pipe.hasPortal && !pipe.portalCollected && !pipe.isMegaPortal) State.portalPending = false;
+                continue;
+            }
+
+            if (pipe.hasPortal && !pipe.portalCollected) {
+                const pX = pipe.x + pipeW / 2;
+                let hit = false;
+                if (pipe.isMegaPortal) {
+                    hit = Math.abs(cx - pX) < 40;           // шлюз-луч: срабатывает на любой высоте
+                } else if (!State.isMirrorWorld) {
+                    const ddx = cx - pX, ddy = cy - pipe.portalY;
+                    hit = ddx * ddx + ddy * ddy < 55 * 55;
+                }
+                if (hit) {
+                    pipe.portalCollected = true;
+                    Sound.portal();
+                    if (pipe.isMegaPortal) {
+                        State.isMirrorWorld = false;
+                        State.mirrorColumnsPassed = 0;
+                        State.hasShield = true;
+                        updateShieldHud();
+                        State.nextPortalScore = State.score + st.portalMinScore + Math.floor(Math.random() * st.portalRandomAdd);
+                        State.megaPortalSpawned = false;
+                    } else {
+                        State.isMirrorWorld = true;
+                        State.mirrorColumnsPassed = 0;
+                        State.megaPortalSpawned = false;
+                    }
+                    State.portalPending = false;
+                    for (let s = 0; s < 20; s++) spawnSpark(pX, pipe.isMegaPortal ? cy : pipe.portalY, '#00ffff');
+                }
+            }
+
+            if (!pipe.passed && pipe.x + pipeW < cx) {
+                pipe.passed = true;
+                State.score++;
+                scored = true;
+                updateHudScore();
+                updateBottomProgress();
+                applyProgression();
+                if (State.isMirrorWorld) State.mirrorColumnsPassed++;
+                for (let s = 0; s < 4; s++) spawnSpark(birdX + witchSize * 0.4 + Math.random() * 20, State.birdY + 10 + Math.random() * 30, '#ffd54f');
+                if (State.gameMode === 'story' && State.score >= CONFIG.PIPES_TO_WIN) {
+                    playCutscene();
+                    return true;
+                }
+            }
+            pipes[w++] = pipe;
+        }
+        pipes.length = w;
+        if (scored) Sound.score();
+        return false;
+    }
+
+    /* Один шаг симуляции. true — игра перестала быть в режиме playing */
+    function step(h) {
+        stepBird(h);
+        State.invuln = Math.max(0, State.invuln - h);
+        State.worldBlend += ((State.isMirrorWorld ? 1 : 0) - State.worldBlend) * (1 - Math.exp(-6 * h));
+
+        const dx = currentSpeed() * h;
+        State.groundX += dx;                              // земля едет со скоростью колонн
+        State.bgX += dx * CONFIG.BG_PARALLAX;             // фон — медленнее (параллакс)
+
+        spawnPipes();
+        if (updatePipes(dx)) return true;
+        if (checkCollision()) { gameOver(); return true; }
+        return false;
+    }
+
+    function gameLoop(now) {
+        if (State.mode !== 'playing') { rafId = null; return; }
+        let dt = (now - lastTime) / 1000;
+        lastTime = now;
+        dt = clamp(dt, 0, CONFIG.MAX_DELTA);
+        State.time += dt;
+
+        const n = Math.max(1, Math.ceil(dt / CONFIG.SUBSTEP));
+        const h = dt / n;
+        for (let i = 0; i < n; i++) { if (step(h)) return; }
+
+        updateSparks(dt);
+        draw();
+        rafId = requestAnimationFrame(gameLoop);
+    }
+
+    function cancelLoop() { if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; } }
+
+    /* ---------- Смерть ---------- */
     function commitBest() {
         if (State.score > State.best) {
             State.best = State.score;
             State.newRecord = true;
-            Storage.setBest(State.best);
+            Store.setBest(State.best);
         }
         updateBestDisplays();
     }
@@ -1317,58 +1691,71 @@ function resizeCanvas() {
     function gameOver() {
         State.mode = 'gameover';
         State.holding = false;
+        State.inputLock = performance.now() + 600;       // защита от случайного перезапуска
         cancelLoop();
         dom.btnPause.hidden = true;
         dom.progressHud.classList.remove('visible');
         commitBest();
 
-        if (canvas) {
-            canvas.classList.add('shake-active');
-            setTimeout(() => canvas.classList.remove('shake-active'), 500);
-        }
+        canvas.classList.add('shake-active');
+        setTimeout(() => canvas.classList.remove('shake-active'), 500);
 
-        const birdX = VW * CONFIG.BIRD_X_RATIO;
-        for (let i = 0; i < 25; i++) {
-            spawnSpark(
-                birdX + WITCH_CONFIG.width + Math.random() * 20 - 10,
-                State.birdY + WITCH_CONFIG.height + Math.random() * 20 - 10,
-                Math.random() < 0.5 ? '#ff5252' : '#ffd54f'
-            );
-        }
+        const cx = VW * CONFIG.BIRD_X_RATIO + witchSize / 2, cy = State.birdY + witchSize / 2;
+        for (let i = 0; i < 25; i++) spawnSpark(cx + Math.random() * 20 - 10, cy + Math.random() * 20 - 10, Math.random() < 0.5 ? '#ff5252' : '#ffd54f');
 
         dom.finalScore.textContent = State.score;
         dom.bestGameOver.textContent = State.best;
         dom.bestTile.classList.toggle('record', State.newRecord);
-        dom.goSubtitle.textContent = State.gameMode === 'endless'
-            ? 'Бесконечный полёт окончен...'
-            : State.gameMode === 'zerog'
-                ? 'Ноль-гравитация прервана...'
-                : 'Ведьмочка врезалась...';
+        dom.goSubtitle.textContent = State.gameMode === 'endless' ? 'Бесконечный полёт окончен...'
+            : State.gameMode === 'zerog' ? 'Ноль-гравитация прервана...' : 'Ведьмочка врезалась...';
 
-        draw();
         show(dom.gameOverScreen);
         updateGameOverProgress();
-        Audio.hit();
+        Sound.hit();
+
+        State.fxT = 0;
+        lastTime = performance.now();
+        fxRaf = requestAnimationFrame(fxLoop);
     }
 
+    // Короткая анимация падения за полупрозрачным экраном Game Over
+    function fxLoop(now) {
+        if (State.mode !== 'gameover') { fxRaf = null; return; }
+        const dt = clamp((now - lastTime) / 1000, 0, CONFIG.MAX_DELTA);
+        lastTime = now;
+        State.fxT += dt;
+        State.time += dt;
+
+        const dir = State.isMirrorWorld ? -1 : 1;
+        State.birdVelocity += PHYS.GRAVITY * S * dir * dt;
+        State.birdY += State.birdVelocity * dt;
+        State.birdRot += 240 * dt * dir;
+        const maxY = VH - groundH - witchSize * (1 - WITCH_CONFIG.hitboxPadY);
+        const minY = -witchSize * WITCH_CONFIG.hitboxPadY;
+        if (State.birdY > maxY) { State.birdY = maxY; State.birdVelocity = 0; }
+        if (State.birdY < minY) { State.birdY = minY; State.birdVelocity = 0; }
+        updateSparks(dt);
+        draw();
+
+        if (State.fxT < 1.4) fxRaf = requestAnimationFrame(fxLoop); else fxRaf = null;
+    }
+    function stopFx() { if (fxRaf !== null) { cancelAnimationFrame(fxRaf); fxRaf = null; } }
+
+    /* ---------- Катсцена победы ---------- */
     function playCutscene() {
         State.mode = 'cutscene';
-        State.cutsceneActive = true;
         State.cutsceneT = 0;
         State.skyTransition = 0;
+        State.holding = false;
         cancelLoop();
         dom.btnPause.hidden = true;
         dom.progressHud.classList.remove('visible');
         dom.hintBar.classList.add('hidden');
         commitBest();
 
-        if (dom.cutsceneScreen) dom.cutsceneScreen.classList.remove('hidden');
-        if (dom.cutsceneContent) {
-            dom.cutsceneContent.classList.remove('visible');
-            setTimeout(() => {
-                if (dom.cutsceneContent) dom.cutsceneContent.classList.add('visible');
-            }, 1000);
-        }
+        show(dom.cutsceneScreen);
+        dom.cutsceneContent.classList.remove('visible');
+        setTimeout(() => dom.cutsceneContent.classList.add('visible'), 1000);
 
         lastTime = performance.now();
         rafId = requestAnimationFrame(cutsceneLoop);
@@ -1376,356 +1763,94 @@ function resizeCanvas() {
 
     function cutsceneLoop(now) {
         if (State.mode !== 'cutscene') { rafId = null; return; }
-        if (typeof now !== 'number') now = performance.now();
-
-        let dt = (now - lastTime) / 1000;
+        const dt = clamp((now - lastTime) / 1000, 0, CONFIG.MAX_DELTA);
         lastTime = now;
-        if (dt > CONFIG.MAX_DELTA) dt = CONFIG.MAX_DELTA;
-        if (dt < 0) dt = 0;
-        const f = dt * CONFIG.BASE_FPS;
         State.time += dt;
-
         State.cutsceneT += dt;
         const progress = Math.min(1, State.cutsceneT / State.cutsceneDuration);
 
-        State.birdVelocity = -6 - progress * 4;
-        State.birdY += State.birdVelocity * f;
-        State.pipes = [];
+        State.pipes.length = 0;
+        State.birdVelocity = -(360 + progress * 240) * S;
+        State.birdY += State.birdVelocity * dt;
+        State.birdRot += (-20 - State.birdRot) * (1 - Math.exp(-6 * dt));
         State.skyTransition = Math.min(1, progress * 1.4);
+        State.bgX += pipeSpeed * dt * CONFIG.BG_PARALLAX;
+        State.groundX += pipeSpeed * dt;
 
-        const birdX = VW * CONFIG.BIRD_X_RATIO;
-        const h = WITCH_CONFIG.height;
-        if (Math.random() < 0.8) {
-            spawnSpark(
-                birdX + 10 + (Math.random() - 0.5) * 14,
-                State.birdY + h * 0.6 + (Math.random() - 0.5) * 14,
-                ['#ffd54f', '#fff8e1', '#7dffb0'][Math.floor(Math.random() * 3)]
-            );
-        }
-
-        updateSparks();
-        drawCutscene();
+        const cx = VW * CONFIG.BIRD_X_RATIO + 10, cy = State.birdY + witchSize * 0.6;
+        if (Math.random() < 0.8) spawnSpark(cx + (Math.random() - 0.5) * 14, cy + (Math.random() - 0.5) * 14, ['#ffd54f', '#fff8e1', '#7dffb0'][Math.floor(Math.random() * 3)]);
+        if (Math.random() < 0.7) spawnSpark(Math.random() * VW, VH, ['#ffd54f', '#7dffb0', '#e91e63'][Math.floor(Math.random() * 3)]);
+        updateSparks(dt);
+        drawCutscene(progress);
 
         if (progress >= 1) {
-            State.cutsceneActive = false;
-            if (dom.cutsceneScreen) dom.cutsceneScreen.classList.add('hidden');
-            if (dom.cutsceneContent) dom.cutsceneContent.classList.remove('visible');
+            hide(dom.cutsceneScreen);
+            dom.cutsceneContent.classList.remove('visible');
             State.mode = 'win';
+            State.inputLock = performance.now() + 600;
             commitBest();
             draw();
             show(dom.winScreen);
-            Audio.win();
-            cancelLoop();
+            Sound.win();
+            rafId = null;
             return;
         }
-
         rafId = requestAnimationFrame(cutsceneLoop);
     }
 
-    function drawCutscene() {
-        drawBackgroundWithTransition(State.skyTransition);
-        for (let i = 0; i < 2; i++) {
-            if (Math.random() < 0.5) {
-                spawnSpark(
-                    Math.random() * VW,
-                    VH,
-                    ['#ffd54f', '#7dffb0', '#e91e63'][Math.floor(Math.random() * 3)]
-                );
-            }
-        }
-        drawWitch();
-    }
-
-    function cancelLoop() {
-        if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
-    }
-
-    function drawBackground() {
-        if (!Assets.isReady(Assets.bg)) {
-            ctx.fillStyle = State.isMirrorWorld ? '#110033' : '#000';
-            ctx.fillRect(0, 0, VW, VH);
-            return;
-        }
-        const img = Assets.bg;
-        const ir = img.naturalWidth / img.naturalHeight;
-        const sr = VW / VH;
-        let sx = 0, sy = 0, sw = img.naturalWidth, sh = img.naturalHeight;
-        if (ir > sr) {
-            sw = img.naturalHeight * sr;
-            sx = (img.naturalWidth - sw) / 2;
-        } else {
-            sh = img.naturalWidth / sr;
-            sy = (img.naturalHeight - sh) / 2;
-        }
-        
-        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, VW, VH);
-
-        if (State.isMirrorWorld) {
-            ctx.save();
-            ctx.fillStyle = 'rgba(255, 0, 255, 0.28)';
-            ctx.globalCompositeOperation = 'overlay';
-            ctx.fillRect(0, 0, VW, VH);
-            ctx.restore();
-        }
-    }
-
-    function drawBackgroundWithTransition(t) {
+    function drawCutscene(progress) {
+        ctx.imageSmoothingEnabled = true;
         drawBackground();
+        ctx.imageSmoothingEnabled = false;
+        const t = State.skyTransition;
         if (t > 0) {
             const skyH = VH * Math.min(1, t * 1.2);
-            const skyGrad = ctx.createLinearGradient(0, 0, 0, skyH);
-            skyGrad.addColorStop(0, '#87CEEB');
-            skyGrad.addColorStop(0.6, '#B0E0E6');
-            skyGrad.addColorStop(1, '#E0F7FA');
-            ctx.fillStyle = skyGrad;
+            const g = ctx.createLinearGradient(0, 0, 0, skyH);
+            g.addColorStop(0, '#87CEEB'); g.addColorStop(0.6, '#B0E0E6'); g.addColorStop(1, '#E0F7FA');
+            ctx.fillStyle = g;
             ctx.fillRect(0, 0, VW, skyH);
         }
+        drawGround(progress * groundH * 2);              // земля уходит вниз
+        drawWitch();
+        drawSparks();
     }
 
-    function drawPipe(pipe) {
-        const gap = currentGap();
-        const x = Math.floor(pipe.x);
-        const w = pipeW;
-        const capH = PIPE_CONFIG.capHeight;
-        const topH = Math.floor(pipe.topHeight);
-        const bottomY = topH + gap;
-        const botH = VH - bottomY;
-
-        if (pipe.isMegaPortal) {
-            if (!pipe.portalCollected) {
-                ctx.save();
-                const pX = x + w / 2;
-                const pY = pipe.portalY;
-                const pulse = Math.sin(State.time * 6) * 15;
-                const grad = ctx.createRadialGradient(pX, pY, 20, pX, pY, Math.max(VW, VH));
-                grad.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
-                grad.addColorStop(0.4, 'rgba(0, 255, 255, 0.6)');
-                grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-                ctx.fillStyle = grad;
-                ctx.fillRect(0, 0, VW, VH);
-
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 8;
-                ctx.beginPath();
-                ctx.arc(pX, pY, 120 + pulse, 0, Math.PI * 2);
-                ctx.stroke();
-
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 24px "Courier New"';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('🛡️ ВЫХОД ИЗ ЗАЗЕРКАЛЬЯ 🛡️', pX, pY - 140);
-                ctx.restore();
-            }
-            return;
-        }
-        
-        drawHalloweenPipePart(x, 0, w, topH, true, capH);
-        drawHalloweenPipePart(x, bottomY, w, botH, false, capH);
-
-        if (pipe.hasPortal && !pipe.portalCollected) {
-            ctx.save();
-            const pX = x + w / 2;
-            const pY = pipe.portalY;
-            const pRadius = 24;
-
-            const pulse = Math.sin(State.time * 8) * 6;
-            const grad = ctx.createRadialGradient(pX, pY, 2, pX, pY, pRadius + pulse);
-            grad.addColorStop(0, '#ffffff');
-            grad.addColorStop(0.5, '#ff00ff');
-            grad.addColorStop(1, 'rgba(255, 0, 255, 0)');
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.arc(pX, pY, pRadius + pulse, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.strokeStyle = '#ff00ff';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.arc(pX, pY, pRadius, 0, Math.PI * 2);
-            ctx.stroke();
-
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 14px "Courier New"';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('🌀', pX, pY);
-            ctx.restore();
-        }
-    }
-
-    function drawHalloweenPipePart(x, y, w, h, isTop, capH) {
-        if (h <= 0) return;
-        ctx.fillStyle = State.isMirrorWorld ? '#220033' : '#1a0f1f'; ctx.fillRect(x, y, w, h);
-        ctx.fillStyle = State.isMirrorWorld ? '#440055' : '#2d1a2e'; ctx.fillRect(x + 2, y, w - 4, h);
-        ctx.fillStyle = State.isMirrorWorld ? '#660088' : '#3d2440'; ctx.fillRect(x + 8, y, w - 16, h);
-        ctx.fillStyle = State.isMirrorWorld ? '#8800aa' : '#4d2e52'; ctx.fillRect(x + 8, y, 6, h);
-        ctx.fillStyle = '#0a0510';
-        ctx.fillRect(x, y, 2, h);
-        ctx.fillRect(x + w - 2, y, 2, h);
-
-        ctx.fillStyle = 'rgba(0,0,0,0.35)';
-        const brickH = 22;
-        for (let by = y + brickH; by < y + h; by += brickH) {
-            ctx.fillRect(x + 2, by, w - 4, 2);
-        }
-        ctx.fillStyle = 'rgba(0,0,0,0.25)';
-        for (let by = y, row = 0; by < y + h; by += brickH, row++) {
-            const offset = (row % 2) * (w / 4) + w / 4;
-            for (let bx = x + offset; bx < x + w - 4; bx += w / 2) {
-                ctx.fillRect(bx, by + 2, 2, brickH - 4);
-            }
-        }
-
-        const runeCount = Math.max(2, Math.floor(h / 90));
-        const spacing = h / (runeCount + 1);
-        for (let i = 1; i <= runeCount; i++) {
-            drawHalloweenRune(x + w / 2, y + spacing * i, i);
-        }
-
-        ctx.save();
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.fillStyle = State.isMirrorWorld ? 'rgba(0,255,255,0.08)' : 'rgba(255,140,0,0.06)';
-        ctx.fillRect(x + 4, y, w - 8, h);
-        ctx.restore();
-
-        if (capH > 0) {
-            const capY = isTop ? (y + h - capH) : y;
-            ctx.fillStyle = '#0a0510';
-            ctx.fillRect(x - 6, capY - 2, w + 12, capH + 4);
-            ctx.fillStyle = State.isMirrorWorld ? '#550077' : '#3d2440';
-            ctx.fillRect(x - 4, capY, w + 8, capH);
-            ctx.fillStyle = State.isMirrorWorld ? '#7700aa' : '#5a3a5e';
-            ctx.fillRect(x - 4, capY, w + 8, 4);
-            ctx.fillStyle = State.isMirrorWorld ? '#aa00ff' : '#7a5280';
-            ctx.fillRect(x - 4, capY, w + 8, 2);
-            ctx.fillStyle = '#1a0f1f';
-            ctx.fillRect(x - 4, capY + capH - 3, w + 8, 3);
-            drawHalloweenBat(x + w / 2, capY + capH / 2);
-            drawHalloweenWeb(x - 4, capY, isTop ? 'left' : 'right');
-            drawHalloweenWeb(x + w + 4, capY, isTop ? 'right' : 'left');
-
-            ctx.save();
-            ctx.globalCompositeOperation = 'lighter';
-            const glowY = isTop ? capY + capH : capY;
-            const gg = ctx.createLinearGradient(0, glowY - 4, 0, glowY + (isTop ? 6 : -6));
-            gg.addColorStop(0, 'rgba(255,140,0,0)');
-            gg.addColorStop(0.5, State.isMirrorWorld ? 'rgba(0,255,255,0.4)' : 'rgba(255,140,0,0.4)');
-            gg.addColorStop(1, 'rgba(255,140,0,0)');
-            ctx.fillStyle = gg;
-            ctx.fillRect(x - 4, glowY - 4, w + 8, 10);
-            ctx.restore();
-        }
-    }
-
-    function drawHalloweenRune(cx, cy, seed) {
-        const runes = [
-            [[0, -6], [5, 4], [-5, 4], [3, -2], [-3, -2]],
-            [[0, -6], [0, 6], [-5, 0], [5, 0]],
-            [[-3, -6], [3, -2], [-2, 1], [3, 6]],
-            [[-6, 0], [-3, -3], [3, -3], [6, 0], [3, 3], [-3, 3]],
-        ];
-        const rune = runes[seed % runes.length];
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.shadowColor = State.isMirrorWorld ? '#00ffff' : '#ff8c00';
-        ctx.shadowBlur = 8;
-        ctx.strokeStyle = State.isMirrorWorld ? '#a0ffff' : '#ffb347';
-        ctx.lineWidth = 2;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.beginPath();
-        for (let i = 0; i < rune.length; i++) {
-            const rx = rune[i][0], ry = rune[i][1];
-            if (i === 0) ctx.moveTo(rx * 1.2, ry * 1.2);
-            else ctx.lineTo(rx * 1.2, ry * 1.2);
-        }
-        if (seed % 2 === 0) ctx.closePath();
-        ctx.stroke();
-        ctx.restore();
-    }
-
-    function drawHalloweenBat(cx, cy) {
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.fillStyle = '#0a0510';
-        ctx.fillRect(-10, -2, 5, 3);
-        ctx.fillRect(-10, -3, 3, 1);
-        ctx.fillRect(-7, -1, 3, 2);
-        ctx.fillRect(-3, -2, 6, 5);
-        ctx.fillRect(5, -1, 3, 2);
-        ctx.fillRect(7, -3, 3, 1);
-        ctx.fillRect(5, -2, 5, 3);
-        ctx.fillStyle = State.isMirrorWorld ? '#00ffff' : '#ff8c00';
-        ctx.fillRect(-2, -1, 1, 1);
-        ctx.fillRect(1, -1, 1, 1);
-        ctx.restore();
-    }
-
-    function drawHalloweenWeb(x, y, side) {
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.strokeStyle = 'rgba(220,220,220,0.5)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        const dir = side === 'right' ? 1 : -1;
-        ctx.moveTo(0, 0); ctx.lineTo(6 * dir, 2);
-        ctx.moveTo(0, 0); ctx.lineTo(4 * dir, 5);
-        ctx.moveTo(0, 0); ctx.lineTo(2 * dir, 7);
-        ctx.stroke();
-        ctx.restore();
-    }
-
+    /* =====================================================================
+       ОТРИСОВКА
+       ===================================================================== */
     function drawWitch() {
-        const birdX = VW * CONFIG.BIRD_X_RATIO;
-        const w = WITCH_CONFIG.width;
-        const h = WITCH_CONFIG.height;
+        const W = witchSize;
+        const cx = VW * CONFIG.BIRD_X_RATIO + W / 2;
+        const cy = State.birdY + W / 2;
 
-        const deg = Math.min(
-            Math.max(State.birdVelocity * CONFIG.ROTATION_FACTOR, CONFIG.ROTATION_MIN_DEG),
-            CONFIG.ROTATION_MAX_DEG);
-        const rotation = (State.isMirrorWorld ? -deg : deg) * Math.PI / 180;
-        const cx = birdX + w / 2;
-        const cy = State.birdY + h / 2;
-
-        const glowColor = State.hasShield ? 'rgba(0,255,255,0.6)' : (State.isMirrorWorld ? 'rgba(255,0,255,0.4)' : 'rgba(125,255,176,0.35)');
-        const glow = ctx.createRadialGradient(cx, cy, 4, cx, cy, w * (State.hasShield ? 1.2 : 0.9));
-        glow.addColorStop(0, glowColor);
-        glow.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = glow;
-        ctx.beginPath();
-        ctx.arc(cx, cy, w * (State.hasShield ? 1.2 : 0.9), 0, Math.PI * 2);
-        ctx.fill();
+        const glow = State.hasShield ? sprites.glowShield : (State.isMirrorWorld ? sprites.glowMirror : sprites.glowNormal);
+        if (glow) ctx.drawImage(glow.canvas, cx - glow.size / 2, cy - glow.size / 2, glow.size, glow.size);
 
         ctx.save();
+        if (State.invuln > 0 && Math.floor(State.time * 18) % 2 === 0) ctx.globalAlpha = 0.45;
         ctx.translate(cx, cy);
-        ctx.rotate(rotation);
-        if (State.isMirrorWorld) {
-            ctx.scale(1, -1);
-        }
+        ctx.rotate(State.birdRot * Math.PI / 180);
+        const flip = 1 - 2 * State.worldBlend;           // плавный переворот в зазеркалье
+        if (Math.abs(flip - 1) > 0.001) ctx.scale(1, flip);
         if (Assets.isReady(Assets.witch)) {
-            ctx.drawImage(Assets.witch, -w / 2, -h / 2, w, h);
+            ctx.drawImage(Assets.witch, -W / 2, -W / 2, W, W);
         } else {
             ctx.strokeStyle = 'rgba(255,0,0,0.8)';
             ctx.lineWidth = 2;
-            ctx.strokeRect(-w / 2, -h / 2, w, h);
+            ctx.strokeRect(-W / 2, -W / 2, W, W);
         }
         ctx.restore();
-
-        for (let i = 0; i < sparkPool.length; i++) {
-            const sp = sparkPool[i];
-            if (!sp.active) continue;
-            ctx.globalAlpha = sp.life / sp.maxLife;
-            ctx.fillStyle = sp.color;
-            ctx.fillRect(Math.floor(sp.x), Math.floor(sp.y), sp.size, sp.size);
-        }
-        ctx.globalAlpha = 1;
     }
 
     function draw() {
+        ctx.imageSmoothingEnabled = true;
         drawBackground();
-        for (const pipe of State.pipes) drawPipe(pipe);
+        ctx.imageSmoothingEnabled = false;
+        const pipes = State.pipes;
+        for (let i = 0; i < pipes.length; i++) drawPipe(pipes[i]);
+        drawGround(0);
         drawWitch();
+        drawSparks();
 
         if (State.mode === 'paused') {
             ctx.fillStyle = 'rgba(13,5,24,0.75)';
@@ -1738,140 +1863,34 @@ function resizeCanvas() {
         }
     }
 
-    function gameLoop(now) {
-        if (State.mode !== 'playing') { rafId = null; return; }
-        if (typeof now !== 'number') now = performance.now();
-
-        let dt = (now - lastTime) / 1000;
-        lastTime = now;
-        if (dt > CONFIG.MAX_DELTA) dt = CONFIG.MAX_DELTA;
-        if (dt < 0) dt = 0;
-        const f = dt * CONFIG.BASE_FPS;
-        State.time += dt;
-
-        if (State.gameMode === 'zerog') {
-            if (State.holding) {
-                State.birdVelocity += CONFIG.ZEROG_THRUST * 0.1 * f;
-                if (State.birdVelocity < -CONFIG.ZEROG_MAX_VEL) State.birdVelocity = -CONFIG.ZEROG_MAX_VEL;
-            }
-            State.birdVelocity += CONFIG.ZEROG_GRAVITY * f;
-            State.birdY += State.birdVelocity * f;
-        } else {
-            const grav = State.isMirrorWorld ? -CONFIG.GRAVITY : CONFIG.GRAVITY;
-            State.birdVelocity += grav * f;
-            State.birdY += State.birdVelocity * f;
-        }
-
-        State.frameAccumulator += f;
-        while (State.frameAccumulator >= CONFIG.PIPE_SPAWN_INTERVAL) {
-            State.frameAccumulator -= CONFIG.PIPE_SPAWN_INTERVAL;
-            State.pipes.push(generatePipe());
-        }
-
-        const birdX = VW * CONFIG.BIRD_X_RATIO;
-        const step = currentSpeed() * f;
-        const kept = [];
-        let scored = false;
-
-        const settings = DIFFICULTY_SETTINGS[currentDifficulty];
-
-        for (const pipe of State.pipes) {
-            pipe.x -= step;
-            if (pipe.x + pipeW < CONFIG.PIPE_DESPAWN_X) continue;
-
-            if (pipe.hasPortal && !pipe.portalCollected) {
-                const pX = pipe.x + pipeW / 2;
-                const pY = pipe.portalY;
-                const dx = (birdX + WITCH_CONFIG.width / 2) - pX;
-                const dy = (State.birdY + WITCH_CONFIG.height / 2) - pY;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-
-                const hitRadius = pipe.isMegaPortal ? 180 : 55;
-
-                if (dist < hitRadius) {
-                    pipe.portalCollected = true;
-                    Audio.portal();
-
-                    if (pipe.isMegaPortal) {
-                        State.isMirrorWorld = false;
-                        State.mirrorColumnsPassed = 0;
-                        State.hasShield = true;
-                        updateShieldHud();
-                        State.nextPortalScore = State.score + settings.portalMinScore + Math.floor(Math.random() * settings.portalRandomAdd);
-                        State.megaPortalSpawned = false;
-                    } else {
-                        State.isMirrorWorld = true;
-                        State.mirrorColumnsPassed = 0;
-                        State.megaPortalSpawned = false;
-                    }
-
-                    for (let s = 0; s < 25; s++) {
-                        spawnSpark(pX, pY, '#00ffff');
-                    }
-                }
-            }
-
-            if (!pipe.passed && pipe.x + pipeW < birdX + 20) {
-                pipe.passed = true;
-                State.score++;
-                scored = true;
-                updateHudScore();
-                updateBottomProgress();
-
-                if (State.isMirrorWorld) {
-                    State.mirrorColumnsPassed++;
-                }
-
-                for (let i = 0; i < 4; i++) {
-                    spawnSpark(
-                        birdX + 30 + Math.random() * 20,
-                        State.birdY + 10 + Math.random() * 30,
-                        '#ffd54f'
-                    );
-                }
-                if (State.gameMode === 'story' && State.score >= CONFIG.PIPES_TO_WIN) {
-                    State.pipes = kept.concat(pipe);
-                    playCutscene();
-                    return;
-                }
-            }
-            kept.push(pipe);
-        }
-        State.pipes = kept;
-        if (scored) Audio.score();
-
-        updateSparks();
-        if (checkCollision()) { gameOver(); return; }
-
-        draw();
-        rafId = requestAnimationFrame(gameLoop);
-    }
-
+    /* ---------- Меню: ведьмочка покачивается, мир медленно едет ---------- */
     function idleAnimation(now) {
         if (State.mode !== 'menu') { idleRaf = null; return; }
-        if (typeof now !== 'number') now = performance.now();
-        const t = now / 1000;
-        State.birdY = VH / 2 + Math.sin(t * 2) * (VH * 0.04);
-        State.time = t;
+        const dt = clamp((now - lastTime) / 1000, 0, CONFIG.MAX_DELTA);
+        lastTime = now;
+        State.time += dt;
+        State.bgX += 18 * dt;
+        State.groundX += 72 * dt;
+        State.birdY = VH / 2 - witchSize / 2 + Math.sin(State.time * 2) * (VH * 0.04);
+        State.birdRot = Math.cos(State.time * 2) * 4;
+        updateSparks(dt);
         draw();
         idleRaf = requestAnimationFrame(idleAnimation);
     }
-
     function startIdle() {
         if (idleRaf !== null) return;
+        lastTime = performance.now();
         idleRaf = requestAnimationFrame(idleAnimation);
     }
-    function stopIdle() {
-        if (idleRaf !== null) { cancelAnimationFrame(idleRaf); idleRaf = null; }
-    }
+    function stopIdle() { if (idleRaf !== null) { cancelAnimationFrame(idleRaf); idleRaf = null; } }
 
+    /* =====================================================================
+       ОТЗЫВЫ
+       ===================================================================== */
     function sendReview() {
-        if (!dom.reviewName || !dom.reviewRating || !dom.reviewText) return;
-        
         const name = (dom.reviewName.value || '').trim().slice(0, 30) || 'Аноним';
         const text = (dom.reviewText.value || '').trim().slice(0, 300);
         const rating = dom.reviewRating.value || '5';
-
         if (!text) { alert('Напиши что-нибудь в отзыве!'); return; }
 
         const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSd-fbh-kNdqRvDDN-F9Nkc_qJtMV-K0V496QYaXriwqgViWJQ/formResponse';
@@ -1880,112 +1899,126 @@ function resizeCanvas() {
         formData.append('entry.1672151500', rating);
         formData.append('entry.819834693', text);
 
-        if (dom.btnSendReview) dom.btnSendReview.disabled = true;
-
-        fetch(FORM_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            body: formData
-        }).then(() => {
-            alert('Спасибо! Ваш отзыв отправлен.');
-            dom.reviewName.value = '';
-            dom.reviewText.value = '';
-            dom.reviewRating.value = '5';
-            hide(dom.reviewsScreen);
-            show(dom.menuScreen);
-        }).catch((err) => {
-            console.error(err);
-            alert('Не удалось отправить отзыв.');
-        }).finally(() => {
-            if (dom.btnSendReview) dom.btnSendReview.disabled = false;
-        });
+        dom.btnSendReview.disabled = true;
+        fetch(FORM_URL, { method: 'POST', mode: 'no-cors', body: formData })
+            .then(() => {
+                alert('Спасибо! Ваш отзыв отправлен.');
+                dom.reviewName.value = '';
+                dom.reviewText.value = '';
+                dom.reviewRating.value = '5';
+                closeReviews();
+            })
+            .catch((err) => { console.error(err); alert('Не удалось отправить отзыв.'); })
+            .finally(() => { dom.btnSendReview.disabled = false; });
     }
+    function openReviews() { hide(dom.menuScreen); show(dom.reviewsScreen); }
+    function closeReviews() { hide(dom.reviewsScreen); show(dom.menuScreen); }
 
-    function openReviews() {
-        hide(dom.menuScreen);
-        show(dom.reviewsScreen);
-    }
-    function closeReviews() {
-        hide(dom.reviewsScreen);
-        show(dom.menuScreen);
-    }
-
-    function isUIElement(t) { return t && t.closest && t.closest('button, .hud-btn, .hud-pill, .diff-selector'); }
-
-    // Переключение сложности
-    if (dom.diffSelector) {
-        dom.diffSelector.addEventListener('click', (e) => {
-            const btn = e.target.closest('.diff-btn');
-            if (!btn) return;
-            dom.diffSelector.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentDifficulty = btn.dataset.diff;
-            resizeCanvas();
-        });
-    }
-
-    canvas.addEventListener('mousedown', (e) => { if (!isUIElement(e.target)) pressJump(); });
-    canvas.addEventListener('mouseup', () => releaseJump());
-    canvas.addEventListener('mouseleave', () => releaseJump());
-    canvas.addEventListener('touchstart', (e) => {
-        if (isUIElement(e.target)) return;
-        if (e.cancelable) e.preventDefault();
-        Audio.unlock();
-        Music.unlock();
-        pressJump();
-    }, { passive: false });
-    canvas.addEventListener('touchend', (e) => {
-        if (e.cancelable) e.preventDefault();
-        releaseJump();
-    }, { passive: false });
-
-    dom.btnStoryMode.addEventListener('click', (e) => { e.stopPropagation(); startGame('story'); });
-    dom.btnEndlessMode.addEventListener('click', (e) => { e.stopPropagation(); startGame('endless'); });
-    dom.btnZeroGMode.addEventListener('click', (e) => { e.stopPropagation(); startGame('zerog'); });
-    dom.btnReviews.addEventListener('click', (e) => { e.stopPropagation(); openReviews(); });
-    dom.btnReviewsBack.addEventListener('click', (e) => { e.stopPropagation(); closeReviews(); });
-    dom.btnSendReview.addEventListener('click', (e) => { e.stopPropagation(); sendReview(); });
-    dom.btnRetry.addEventListener('click', (e) => { e.stopPropagation(); startGame(State.gameMode); });
-    dom.btnToMenu.addEventListener('click', (e) => { e.stopPropagation(); goToMenu(); });
-    dom.btnContinueEndless.addEventListener('click', (e) => { e.stopPropagation(); continueEndless(); });
-    dom.btnPlayAgain.addEventListener('click', (e) => { e.stopPropagation(); startGame('story'); });
-    dom.btnWinToMenu.addEventListener('click', (e) => { e.stopPropagation(); goToMenu(); });
-    dom.btnPause.addEventListener('click', (e) => { e.stopPropagation(); togglePause(); });
-    dom.btnMute.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const muted = Music.toggleMute();
-        dom.btnMute.textContent = muted ? '🔇' : '🔊';
+    /* =====================================================================
+       ВВОД
+       ===================================================================== */
+    dom.diffSelector.addEventListener('click', (e) => {
+        const btn = e.target.closest('.diff-btn');
+        if (!btn) return;
+        dom.diffSelector.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentDifficulty = btn.dataset.diff;
+        computeParams();
     });
+
+    const activePointers = new Set();
+    const keysHeld = new Set();
+    const JUMP_KEYS = new Set(['Space', 'ArrowUp', 'KeyW']);
+
+    canvas.addEventListener('pointerdown', (e) => {
+        if (e.cancelable) e.preventDefault();
+        Sound.unlock();
+        activePointers.add(e.pointerId);
+        try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+        pressJump();
+    });
+    const onPointerEnd = (e) => {
+        activePointers.delete(e.pointerId);
+        if (activePointers.size === 0 && keysHeld.size === 0) releaseJump();
+    };
+    canvas.addEventListener('pointerup', onPointerEnd);
+    canvas.addEventListener('pointercancel', onPointerEnd);
+
+    dom.btnStoryMode.addEventListener('click', () => startGame('story'));
+    dom.btnEndlessMode.addEventListener('click', () => startGame('endless'));
+    dom.btnZeroGMode.addEventListener('click', () => startGame('zerog'));
+    dom.btnReviews.addEventListener('click', openReviews);
+    dom.btnReviewsBack.addEventListener('click', closeReviews);
+    dom.btnSendReview.addEventListener('click', sendReview);
+    dom.btnRetry.addEventListener('click', () => startGame(State.gameMode));
+    dom.btnToMenu.addEventListener('click', goToMenu);
+    dom.btnContinueEndless.addEventListener('click', continueEndless);
+    dom.btnPlayAgain.addEventListener('click', () => startGame('story'));
+    dom.btnWinToMenu.addEventListener('click', goToMenu);
+    dom.btnPause.addEventListener('click', () => { dom.btnPause.blur(); togglePause(); });
+    dom.btnMute.addEventListener('click', () => {
+        dom.btnMute.textContent = Sound.toggleMute() ? '🔇' : '🔊';
+        dom.btnMute.blur();
+    });
+    dom.btnMute.textContent = Sound.muted ? '🔇' : '🔊';
+
+    function isTypingTarget(t) {
+        return !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
+    }
 
     window.addEventListener('keydown', (e) => {
-        if (e.repeat) return;
-        if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+        if (isTypingTarget(e.target)) return;            // не мешаем печатать отзыв
+        if (JUMP_KEYS.has(e.code)) {
             e.preventDefault();
+            if (e.repeat) return;
+            keysHeld.add(e.code);
             pressJump();
-        }
-        if (e.code === 'KeyP' || e.code === 'Escape') {
-            e.preventDefault(); togglePause();
+        } else if ((e.code === 'KeyP' || e.code === 'Escape') && !e.repeat) {
+            e.preventDefault();
+            togglePause();
         }
     });
-
     window.addEventListener('keyup', (e) => {
-        if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
-            releaseJump();
+        if (!JUMP_KEYS.has(e.code)) return;
+        keysHeld.delete(e.code);
+        if (keysHeld.size === 0 && activePointers.size === 0) releaseJump();
+    });
+
+    window.addEventListener('blur', () => {
+        keysHeld.clear(); activePointers.clear(); releaseJump();
+        if (State.mode === 'playing') togglePause();
+    });
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            if (State.mode === 'playing') togglePause();
+            Sound.suspend();
+        } else {
+            Sound.resume();
         }
     });
 
+    let resizeTimer = null;
+    function onResize() { clearTimeout(resizeTimer); resizeTimer = setTimeout(resizeCanvas, 120); }
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+
+    /* =====================================================================
+       СТАРТ
+       ===================================================================== */
     resizeCanvas();
     initHudImages();
     updateBestDisplays();
-    State.birdY = VH / 2;
+    State.birdY = VH / 2 - witchSize / 2;
+    draw();
 
     Assets.load().then(() => {
         renderMenuWitch();
+        buildBackground();
         draw();
         startIdle();
     });
 
-    window.__flappyWitch = { State, CONFIG, BG_CONFIG, WITCH_CONFIG, PIPE_CONFIG, Assets };
+    window.__flappyWitch = { State, PHYS, CONFIG, BG_CONFIG, WITCH_CONFIG, PIPE_CONFIG, Assets };
 })();
 </script>
 </body>
